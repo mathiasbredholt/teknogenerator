@@ -1,19 +1,14 @@
-(
-// Example of sound grain
-(\instrument: \bd, \tags: [\basebeat], \sustained: false, \attention: 2, \attributes: (\amp: 0.1))
-)
-
-
-(
-var grains = { ~generate.value } ! 64;
-
-grains.do {
-    arg i;
-
-};
-
-
-)
+/*
+|--------------------------------------------|
+| TEKNO GENERATOR 3000                       |
+|--------------------------------------------|
+| By Mathias Bredholt and Mathias Kirkegaard |
+| Copyright 2016 - All rights reserved.      |
+|                                            |
+| Run instruments.scd then generator.scd     |
+| and then this.                             |
+|--------------------------------------------|
+*/
 
 (
 var grains = { ~generate.value } ! 128;
@@ -61,6 +56,3 @@ seq.keysValuesDo {
 };
 
 )
-
-
-Dictionary
