@@ -11,8 +11,7 @@
 */
 
 (
-var res = 32;
-var seq = ();
+var res = 16;
 var num_grains = 256;
 var seq_duration = 4;
 
@@ -22,23 +21,9 @@ var seq_duration = 4;
 
 //(\instrument: \bd, \tags: [\basebeat], \sustained: false, \attention: 2, \attributes: (\amp: 0.1))
 
-// ----- Fill sequence with silence -------
-~all_instruments.do {
-    arg instr;
-    // Add all instruments to sequence
-    seq.add(instr -> ());
-    // Iterate through attributes
-    ~default_attributes.keysValuesDo {
-        arg key, value;
-        // For each attribute add a list of repeated default values
-        seq[instr].add(key -> (value ! res));
-    }
-};
-// ----------------------------------------
-
 Tempo.bpm = 127;
 
-seq.keysDo {
+~all_instruments.do {
     arg instr;
     Pdef((instr ++ "_pat").asSymbol).play;
 };
@@ -46,22 +31,69 @@ seq.keysDo {
 {
     loop {
         // Generate array of random grains
+        var seq = ();
         var grains = { ~generate.value } ! num_grains;
+
+        // ----- Fill sequence with silence -------
+        ~all_instruments.do {
+            arg instr;
+            // Add all instruments to sequence
+            seq.add(instr -> ());
+            // Iterate through attributes
+            ~default_attributes.keysValuesDo {
+                arg key, value;
+                // For each attribute add a list of repeated default values
+                seq[instr].add(key -> (value ! res));
+            }
+        };
+        // ----------------------------------------
+
         // Iterate through grain array
         grains.size.do {
             arg i;
+            var index = 0;
 
-            // Iterate through attributes of current grain
-            grains[i][\attributes].keysValuesDo {
-                arg key, value;
-                if (grains[i][\tags].find([\basebeat]) != nil, {
-                    seq[grains[i][\instrument]][key][(res/4).asInt * 4.rand] = value;
+            if (grains[i][\tags].find([\basebeat]) != nil, {
+                index = (res/4) * 4.rand;
+
+                // index.postln;
+                if (seq[grains[i][\instrument]][\type][index] == \rest, {
+                    grains[i][\attributes].keysValuesDo {
+                        arg key, value;
+                        seq[grains[i][\instrument]][key][index] = value;
+                    }
                 });
+            });
 
-                if (grains[i][\tags].find([\backbeat]) != nil, {
-                    seq[grains[i][\instrument]][key][((res/2).asInt * 2.rand + (res/4))] = value;
-                })
-            }
+            if (grains[i][\tags].find([\backbeat]) != nil, {
+                index = ((res/2).asInt * 2.rand + (res/4));
+                if (seq[grains[i][\instrument]][\type][index] == \rest, {
+                    grains[i][\attributes].keysValuesDo {
+                        arg key, value;
+                        seq[grains[i][\instrument]][key][index] = value;
+                    }
+                });
+            });
+
+            if (grains[i][\tags].find([\offbeat]) != nil, {
+                index = ((res/4).asInt * 4.rand + (res/8));
+                if (seq[grains[i][\instrument]][\type][index] == \rest, {
+                    grains[i][\attributes].keysValuesDo {
+                        arg key, value;
+                        seq[grains[i][\instrument]][key][index] = value;
+                    }
+                });
+            });
+
+            if (grains[i][\tags].find([\random]) != nil, {
+                index = res.rand;
+                if (seq[grains[i][\instrument]][\type][index] == \rest, {
+                    grains[i][\attributes].keysValuesDo {
+                        arg key, value;
+                        seq[grains[i][\instrument]][key][index] = value;
+                    }
+                });
+            });
         };
 
         // Iterate through all instruments in sequence
@@ -78,11 +110,12 @@ seq.keysDo {
             // Chain the sequences with a pattern containing the instrument
             Pdef((key ++ "_pat").asSymbol, Pchain(Pbind(
                 \instrument, key,
-                \dur, 2/res,
+                \dur, seq_duration/res,
             ), Pbind(*pattern.asPairs)));
         };
 
-        seq_duration.wait;
+        (seq_duration * 4).wait;
+
     }
 }.fork;
 )
