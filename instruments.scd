@@ -10,7 +10,7 @@ SynthDef(\sd, {
     arg amp = 0.1, release = 0.02;
     var aEnv = EnvGen.kr(Env.perc(1e-3, release), doneAction: 2);
     var sig = WhiteNoise.ar * aEnv * amp;
-    sig = sig + (SinOsc.ar(500) * aEnv);
+    sig = sig + (SinOsc.ar(300, 0, 0.5) * aEnv);
     Out.ar(0, sig ! 2);
 }).add;
 
@@ -36,7 +36,6 @@ SynthDef(\tone, {
 
 	Out.ar(0,sig);
 }).add;
-
 
 SynthDef(\bell, {
 	arg amp = 0.1, attack = 0.03, release = 0.5, freq = 400, delay = 0.1;
