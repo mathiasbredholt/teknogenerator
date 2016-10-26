@@ -20,13 +20,14 @@ SynthDef(\hat,{
 	var sig = WhiteNoise.ar * aEnv* amp;
 	sig = RHPF.ar(sig, freq,0.2);
 	Out.ar(0, sig ! 2)
-}).play;
+}).add;
 
 SynthDef(\tone, {
-	arg amp = 0.1, attack = 0.01, release = 0.5, freq = 220, dist = 100;
+	arg amp = 0.1, attack = 0.01, release = 0.5, freq = 220, dist = 10, chorus = 0, rate = 10;
 	var aEnv = EnvGen.kr(Env.perc(attack, release),doneAction: 2);
-	var sig = Saw.ar([freq*1.01,freq*0.99]);
-	sig = BPF.ar(sig,freq,0.2) *amp * aEnv;
+	var freq_mod = (SinOsc.kr(rate,0,chorus)- chorus/2)*100;
+	var sig = Saw.ar([freq*1.01+freq_mod,freq*0.99+freq_mod]);
+	sig = BPF.ar(sig,freq,0.5) *amp * aEnv;
 
 	/* ---------Effects-------------- */
 
@@ -34,27 +35,67 @@ SynthDef(\tone, {
 	sig = (dist) * sig / (1 + (dist * sig.abs));
 
 	Out.ar(0,sig);
-}).play;
+}).add;
+
+
+SynthDef(\bell, {
+	arg amp = 0.1, attack = 0.03, release = 0.5, freq = 400, delay = 0.1;
+	var harms = [0.56,0.92,1.19,1.71,2,2.74,3,3.76,4.07];
+	var aEnv = EnvGen.kr(Env.perc(attack, release, curve: -4),doneAction: 2);
+	var sig = SinOsc.ar(freq+LFNoise2.kr(10,5));
+	harms.do({
+		arg harm, index;
+		var i = index-(2*index)+1; // LOL hjælp med bedre både at skrive -index
+		sig = sig + (SinOsc.ar(harm*freq,1/2pi*index)*(2**i) * EnvGen.kr(Env.perc(attack*(1/index),release*(1/(index+1)),curve: \sine)));
+	});
+
+	sig = sig + AllpassC.ar(sig,delay,delay,2,0.2);
+	sig = sig * amp*aEnv + (BPF.ar(WhiteNoise.ar,2e3,mul:0.1)*EnvGen.kr(Env.perc(0.01,0.05)));
+	Out.ar(0,sig ! 2);
+}).add;
+
+
+SynthDef(\cymbal, {
+	// Cymbal sound made with resonatorbanks of fixed exponentially distributed frequencies.
+	arg release = 5;
+	var lodriver, locutoffenv, hidriver, hicutoffenv, freqs, sig;
+
+	//
+	var ampEnv = EnvGen.ar(Env.perc(0,release));
+	var freqEnv = EnvGen.ar(Env.perc(0,release*0.8))*20000;
+	var anslag = Ringz.ar(Impulse.ar(0.1), {exprand(300, 20000)}.dup(100)).mean;
+	anslag = LPF.ar(anslag,freqEnv+500)*ampEnv;
+
+	// Driver for low frequencies to resonatorbank,
+	locutoffenv = EnvGen.ar(Env.perc(0.5, release)) * 20000 + 10;
+	lodriver = LPF.ar(WhiteNoise.ar(0.1), locutoffenv);
+
+	//Driver for high frequencies to resonatorbank + amplitude attenuation
+	hicutoffenv = 10001 - (EnvGen.ar(Env.perc(1, release/2)) * 10000);
+	hidriver = HPF.ar(WhiteNoise.ar(0.1), hicutoffenv);
+	hidriver = hidriver * EnvGen.ar(Env.perc(1, 2, release/10));
+
+	//Exponential frequency distribution
+	freqs  = {exprand(300, 20000)}.dup(200);
+	sig = Ringz.ar(lodriver + hidriver + anslag, freqs).mean;
+
+	// The hit is added to signal, together with some of the low driving noise
+	sig = ((sig * 1) + (lodriver * 2) + anslag).dup;
+	sig = sig *EnvGen.ar(Env([1,1,0],[release*1.25,0.3]),doneAction: 2);
+
+	Out.ar(0,FreeVerb.ar(sig,0.2)*0.1);
+}).add;
+
+SynthDef(\ride,{
+	arg release = 1;
+	var ampEnv = EnvGen.ar(Env.perc(0,release),doneAction: 2);
+	var freqEnv = EnvGen.ar(Env.perc(0,release*0.8))*20000;
+	var sig = Ringz.ar(Impulse.ar(0.1), {exprand(300, 20000)}.dup(100)).mean;
+
+	sig = LPF.ar(sig,freqEnv+500);
+	sig = sig * ampEnv;
+
+	Out.ar(0, (sig*0.1) ! 2);
+}).add;
 
 )
-
-(
-SynthDef(\tone, {
-	arg amp = 0.1, attack = 0.01, release = 0.5, freq = 220, dist = 50 , chorus = 1;
-	var aEnv = EnvGen.kr(Env.perc(attack, release),doneAction: 2);
-	var freq_mod = SinOsc.kr(10,0,chorus)-chorus/2;
-	var sig = Saw.ar([(freq+freq_mod)*1.01,(freq+freq_mod)*0.99]);
-	sig = BPF.ar(sig,freq,0.2) *amp * aEnv;
-
-
-
-	/* ---------Effects-------------- */
-
-	//Distortion
-	sig = (dist) * sig / (1 + (dist * sig.abs));
-
-	Out.ar(0,sig);
-}).play;
-)
-
-tan
