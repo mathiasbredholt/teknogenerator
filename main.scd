@@ -11,7 +11,7 @@
 */
 
 (
-var res = 16;
+var res = 4;
 var num_grains = 256;
 var seq_duration = 4;
 

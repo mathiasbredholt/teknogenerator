@@ -14,7 +14,7 @@ var all_tags = [\basebeat, \random, \offbeat, \drone, \root, \harmonic_variation
 
     if (instrument == \bd, {
         if (tags.find([\basebeat]) != nil, {
-            attributes = (\startFreq: 150.rrand(600), \endFreq: 50, \freqEnvTime: 0.05, \amp: 0.8, \release: 0.4, \type: \note);
+            attributes = (\startFreq: 150.rrand(250), \endFreq: 50, \freqEnvTime: 0.2, \amp: 0.8, \release: 0.4, \type: \note);
         });
     });
 
