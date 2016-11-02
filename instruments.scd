@@ -16,9 +16,9 @@ SynthDef(\sd, {
 
 SynthDef(\hat,{
 	arg amp = 0.1, attack = 1e-3, release = 0.1, freq = 1000;
-	var aEnv = EnvGen.kr(Env.perc(attack, release),doneAction: 2);
+	var aEnv = EnvGen.kr(Env.perc(attack, release, 1, -8),doneAction: 2);
 	var sig = WhiteNoise.ar * aEnv* amp;
-	sig = RHPF.ar(sig, freq,0.2);
+	sig = RHPF.ar(sig, freq,0.7);
 	Out.ar(0, sig ! 2)
 }).add;
 
@@ -56,45 +56,44 @@ SynthDef(\bell, {
 
 SynthDef(\cymbal, {
 	// Cymbal sound made with resonatorbanks of fixed exponentially distributed frequencies.
-	arg release = 5;
+	arg release = 10, amp = 1;
 	var lodriver, locutoffenv, hidriver, hicutoffenv, freqs, sig;
 
 	//
-	var ampEnv = EnvGen.ar(Env.perc(0,release));
-	var freqEnv = EnvGen.ar(Env.perc(0,release*0.8))*20000;
-	var anslag = Ringz.ar(Impulse.ar(0.1), {exprand(300, 20000)}.dup(100)).mean;
-	anslag = LPF.ar(anslag,freqEnv+500)*ampEnv;
+	var ampEnv = EnvGen.ar(Env.perc(0,0.1));
+	var freqEnv = EnvGen.ar(Env.perc(0,0.4))*15e3;
+    var excitation = Klank.ar(`[{exprand(300, 20000)}.dup(100), nil, { 0.3 }.dup(100)], Impulse.ar(0.1)) * 1/100;
+	excitation = BLowPass4.ar(excitation ,freqEnv+500, 0.4)*ampEnv;
 
 	// Driver for low frequencies to resonatorbank,
-	locutoffenv = EnvGen.ar(Env.perc(0.5, release)) * 20000 + 10;
+	locutoffenv = EnvGen.ar(Env.perc(0.5, release)) * 20000 + 100;
 	lodriver = LPF.ar(WhiteNoise.ar(0.1), locutoffenv);
 
 	//Driver for high frequencies to resonatorbank + amplitude attenuation
-	hicutoffenv = 10001 - (EnvGen.ar(Env.perc(1, release/2)) * 10000);
-	hidriver = HPF.ar(WhiteNoise.ar(0.1), hicutoffenv);
-	hidriver = hidriver * EnvGen.ar(Env.perc(1, 2, release/10));
+    hicutoffenv = XLine.kr(50,4e3, 0.2);
+	hidriver = BHiPass4.ar(WhiteNoise.ar(0.1), hicutoffenv, 2);
+	hidriver = hidriver * EnvGen.ar(Env.perc(1, 2, release/10)) * 3;
 
 	//Exponential frequency distribution
 	freqs  = {exprand(300, 20000)}.dup(200);
-	sig = Ringz.ar(lodriver + hidriver + anslag, freqs).mean;
+    sig = Klank.ar(`[freqs, nil, { 2 }.dup(200)], lodriver + hidriver + excitation) * 1/200;
 
 	// The hit is added to signal, together with some of the low driving noise
-	sig = ((sig * 1) + (lodriver * 2) + anslag).dup;
-	sig = sig *EnvGen.ar(Env([1,1,0],[release*1.25,0.3]),doneAction: 2);
+    sig = ((sig * 1) + (lodriver * 2) + (excitation * 2)).dup;
+    sig = sig *EnvGen.ar(Env.perc(1e-3, release, 1, -32), doneAction: 2);
 
-	Out.ar(0,FreeVerb.ar(sig,0.2)*0.1);
-}).add;
+	Out.ar(0, sig*0.5*amp);
+}).play;
 
 SynthDef(\ride,{
-	arg release = 1;
-	var ampEnv = EnvGen.ar(Env.perc(0,release),doneAction: 2);
+	arg release = 1, amp = 0.5;
+	var ampEnv = EnvGen.ar(Env.perc(0,release, 1, -8),doneAction: 2);
 	var freqEnv = EnvGen.ar(Env.perc(0,release*0.8))*20000;
-	var sig = Ringz.ar(Impulse.ar(0.1), {exprand(300, 20000)}.dup(100)).mean;
-
+	var sig = Klank.ar(`[{exprand(500, 20000)}.dup(100), nil, { release }.dup(100)], Impulse.ar(0.1)) * 1/100;
 	sig = LPF.ar(sig,freqEnv+500);
 	sig = sig * ampEnv;
 
-	Out.ar(0, (sig*0.1) ! 2);
+	Out.ar(0, (sig*amp) ! 2);
 }).add;
 
 (
