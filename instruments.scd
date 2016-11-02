@@ -97,4 +97,26 @@ SynthDef(\ride,{
 	Out.ar(0, (sig*0.1) ! 2);
 }).add;
 
+(
+SynthDef(\fm_stab, {
+	arg freq = 100, amp = 0.1, attack = 0.1, release = 0.5, detune = 0.5;
+	var partials = [ 1+detune, 2+detune, 4+detune, 12+detune];
+	var indexes = [ 1, 2, 4, 8];
+    var fm = 0;
+	var aEnv = EnvGen.ar(Env.perc(attack,release),doneAction: 2);
+	var fEnv = EnvGen.ar(Env.perc(0.01,0.2));
+    partials.size.do {
+        arg n;
+        var modfreq = freq*partials[n];
+        fm = SinOsc.ar([modfreq*Rand(0.9999, 1.0001), modfreq*Rand(0.9999, 1.0001)], 0, modfreq*indexes[n], fm);
+    };
+
+
+	fm = SinOsc.ar(freq + fm, Saw.kr(0.5).range(-2pi,2pi));
+	fm = fm * aEnv;
+	fm = BBandPass.ar(fm,freq+(fEnv*1000),1.5);
+	Out.ar(0,(fm*amp));
+}).add;
+)
+
 )
