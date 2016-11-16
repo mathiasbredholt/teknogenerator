@@ -11,8 +11,8 @@
 */
 
 (
-var res = 16;
-var num_grains = 256;
+var res = 32;
+var num_grains = 500;
 var seq_duration = 4;
 var max_attention = 50;
 
@@ -32,10 +32,10 @@ Tempo.bpm = 127;
 
 g = Group.new(s);
 
-{
+fork {
     loop {
         var scale, seq, grains, attention_array;
-        thisThread.randSeed = 12;
+        thisThread.randSeed = 4;
 
         scale = [ Scale.minor, Scale.dorian, Scale.lydian, Scale.mixolydian, Scale.major ].choose;
 
@@ -77,9 +77,17 @@ g = Group.new(s);
             if (grain[\beat_tag] == \offbeat, {
                 index = ((res/4).asInt * 4.rand + (res/8));
             });
+/*
+            if (grain[\beat_tag] == \silence, {
+                index = ((res/4).asInt * 4.rand + (res/8));
+            });*/
 
             if (grain[\beat_tag] == \random, {
                 index = res.rand;
+            });
+
+            if (grain[\beat_tag] == \variation, {
+                index = ((res/4).asInt * 4.rand + ((res/4).rand));
             });
 
             if (grain[\beat_tag] == \barline, {
@@ -94,16 +102,16 @@ g = Group.new(s);
             // and the total attention is less than max attention
             if (
                 (seq[grain[\instrument]][\seq][\type][index] == \rest) &&
-                ((attention_array ++ [grain[\attention]]).mean < 10), {
+                ((attention_array ++ [grain[\attention]]).mean < 0.5), {
                     // Change the attributes of the grain to non-silent
                     grain[\attributes].keysValuesDo {
                         arg key, value;
                         seq[grain[\instrument]][\seq][key][index] = value;
                     };
 
-                    if (grain[\attention] > 0, {
+                    // if (grain[\attention] > 0, {
                         attention_array = attention_array ++ [grain[\attention]];
-                    });
+            // });
             });
 
             seq[grain[\instrument]][\sustained] = grain[\sustained]
@@ -140,10 +148,18 @@ g = Group.new(s);
         (seq_duration * 4).wait;
 
     }
-}.fork;
+};
 
 {
-    var sig = In.ar(0, 2);
-    ReplaceOut.ar(0, Compander.ar(sig, sig*2, 0.2, 1, 1/4));
+    var master_in = In.ar(0, 2);
+    var reverb_in = In.ar(~reverb, 2);
+
+    var reverb = GVerb.ar(reverb_in, 100, 5, drylevel: 0);
+
+    var mix = Mix([ master_in, reverb ]) * 0.5;
+    var compressor = Compander.ar(mix, mix * 2, 0.2, 1, 1/4);
+    var master_out =  compressor;
+
+    ReplaceOut.ar(0, master_out);
 }.play(g, addAction: \addToTail);
 )
