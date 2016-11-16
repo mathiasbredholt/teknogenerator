@@ -108,7 +108,6 @@ SynthDef(\ride,{
     Out.ar(0, (sig*amp) ! 2);
 }).add;
 
-
 SynthDef(\bass, {
     arg amp = 1, freq = 50, rez = 0, gate = 1, filter_release = 0.05, cutoff = 15e3, t_trig = 1;
     var dEnv = EnvGen.kr(Env.adsr(0.01, 1, 1, 0.05), gate, doneAction: 2);
@@ -132,5 +131,25 @@ SynthDef(\pad, {
     var sig = Mix(LFSaw.ar((freq * Rand(0.998, 1.002) ! 2) * SinOsc.kr(Rand(0.5, 1), Rand(0, 2pi)).range(0.998, 1.002) ! 4, Rand(0, 1), 0.3)) * 0.05 * aEnv * amp;
     var flt = BLowPass.ar(sig, fEnv, 0.9);
     Out.ar(0, Compander.ar(flt, InFeedback.ar(~sidechain) * 4, 0.1, 1, 1/6, 0.01, 0.05));
+}).add;
+
+SynthDef(\fm_stab, {
+	arg freq = 100, amp = 0.1, attack = 0.1, release = 0.5, detune = 0.5;
+	var partials = [ 1+detune, 2+detune, 4+detune, 12+detune];
+	var indexes = [ 1, 2, 4, 8];
+    var fm = 0;
+	var aEnv = EnvGen.ar(Env.perc(attack,release),doneAction: 2);
+	var fEnv = EnvGen.ar(Env.perc(0.01,0.2));
+    partials.size.do {
+        arg n;
+        var modfreq = freq*partials[n];
+        fm = SinOsc.ar([modfreq*Rand(0.9999, 1.0001), modfreq*Rand(0.9999, 1.0001)], 0, modfreq*indexes[n], fm);
+    };
+
+
+	fm = SinOsc.ar(freq + fm, Saw.kr(0.5).range(-2pi,2pi));
+	fm = fm * aEnv;
+	fm = BBandPass.ar(fm,freq+(fEnv*1000),1.5);
+	Out.ar(0,(fm*amp));
 }).add;
 )
