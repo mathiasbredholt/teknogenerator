@@ -58,7 +58,8 @@ SynthDef(\tone, {
     Out.ar(0,sig);
 }).add;
 
-SynthDef(\bell, {
+
+SynthDef(\iron, {
     arg amp = 0.1, attack = 0.03, release = 0.5, freq = 400, delay = 0.1;
     var harms = [0.56,0.92,1.19,1.71,2,2.74,3,3.76,4.07];
     var aEnv = EnvGen.kr(Env.perc(attack, release, curve: -4),doneAction: 2);
@@ -73,6 +74,7 @@ SynthDef(\bell, {
     sig = sig * amp*aEnv + (BPF.ar(WhiteNoise.ar,2e3,mul:0.1)*EnvGen.kr(Env.perc(0.01,0.05)));
     Out.ar(0,sig ! 2);
 }).add;
+
 
 
 SynthDef(\cymbal, {
@@ -103,7 +105,8 @@ SynthDef(\cymbal, {
     sig = ((sig * 1) + (lodriver * 2) + (excitation * 2)).dup;
     sig = sig *EnvGen.ar(Env.perc(1e-3, release, 1, -32), doneAction: 2);
 
-    Out.ar(0, sig*0.5*amp);
+	Out.ar(0, sig*0.5*amp);
+
 }).add;
 
 SynthDef(\ride,{
@@ -144,6 +147,7 @@ SynthDef(\pad, {
     Out.ar(~reverb, sig*reverb);
 }).add;
 
+
 SynthDef(\fm_stab, {
 	arg freq = 100, amp = 0.1, attack = 0.1, release = 0.5, detune = 0.5;
 	var partials = [ 1+detune, 2+detune, 4+detune, 12+detune];
@@ -163,4 +167,23 @@ SynthDef(\fm_stab, {
 	fm = BBandPass.ar(fm,freq+(fEnv*1000),1.5);
 	Out.ar(0,(fm*amp));
 }).add;
+
+SynthDef(\bell, {
+	arg gate=1, freq=100, decay=0.6, amp=1;
+	var excitation, sig, aEnv, fEnv;
+	excitation = WhiteNoise.ar(EnvGen.ar(Env.perc(0.0000001, 0.01)));
+	sig = Klank.ar(`[
+		// frequency ratios
+		[0.501, 1, 0.7,   2.002, 3, 9.6,   2.49, 11, 2.571,  3.05, 6.242, 12.49, 13, 16, 24],
+		// amps
+		[0.002,0.02,0.001, 0.008,0.02,0.004, 0.02,0.04,0.02, 0.005,0.05,0.05, 0.02, 0.03, 0.04],
+		// ring times
+		[1.2, 0.9, 0.25, 0.14, 0.07].stutter(3)
+		]
+	, excitation, freq, 0, decay);
+	aEnv = EnvGen.ar(Env.perc(0.0000000001,decay),doneAction: 2);
+	Out.ar(0, Pan2.ar((sig+excitation) * amp));
+}).add;
+
+
 )
