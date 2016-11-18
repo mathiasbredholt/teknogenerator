@@ -23,6 +23,7 @@ thisThread.randSeed = seed;
 // Generate array of random grains
 root = 55.rrand(66);
 scale = [ Scale.minorPentatonic, Scale.majorPentatonic, Scale.dorian, Scale.mixolydian, Scale.major ].choose;
+// scale = [ Scale.chromatic24 ].choose;
 grains = { ~generate.value(Tempo.bpm, scale, root) } ! num_grains;
 
 
@@ -47,9 +48,9 @@ g = Group.new(s);
 
 fork {
     loop {
-        var seq, attention_array;
+        var seq, attention_array, attention_mean = 1.rrand(8);
 
-        // thisThread.randSeed = seed;
+        //thisThread.randSeed = seed;
 
         seq = ();
         attention_array = [];
@@ -112,7 +113,7 @@ fork {
             // and the total attention is less than max attention
             if (
                 (seq[grain[\instrument]][\seq][\type][index] == \rest) &&
-                ((attention_array ++ [grain[\attention]]).mean < 2), {
+                ((attention_array ++ [grain[\attention]]).mean < attention_mean), {
                     // Change the attributes of the grain to non-silent
                     grain[\attributes].keysValuesDo {
                         arg key, value;

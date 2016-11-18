@@ -129,7 +129,7 @@ var harmony_tags = [\drone];
                 attributes = (
                     \type: \note,
                     \freq: freqs,
-                    \amp: amps * 0.1,
+                    \amp: amps * 0.2,
                     \env_type: 0,
                     \cutoff: 300,
                     \sustaintime: 4*60/tempo,
