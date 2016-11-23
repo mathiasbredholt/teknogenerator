@@ -21,7 +21,7 @@ var harmony_tags = [\drone];
 
 ~generate = {
     arg tempo = 127, scale, root = 60;
-    var beat_tag = beat_tags.choose;
+    var beat_tag;
     var harmony_tag = harmony_tags.choose;
     var attention = 0;
     var instrument = ~all_instruments.choose;
@@ -30,11 +30,12 @@ var harmony_tags = [\drone];
 
     if (instrument == \bd, {
         beat_tag = \basebeat;
-        attention = 0;
+        attention = 0.1;
         attributes = (\startFreq: 200, \endFreq: 55, \freqEnvTime: 0.08, \amp: 1, \sustain_time: 0.1, \release: 0.2, \type: \note, \distort: 0.6);
     });
 
     if (instrument == \sd, {
+		beat_tag = \backbeat;
         if (beat_tag == \backbeat, {
             attention = 2;
             attributes = (\amp: 0.5, \type: \note, \release: 0.05);
@@ -46,6 +47,7 @@ var harmony_tags = [\drone];
     });
 
     if (instrument == \clap, {
+		beat_tag = \backbeat;
         if (beat_tag == \backbeat, {
             attention = 2;
             attributes = (\amp: 0.4, \type: \note, \release: 0.05);
@@ -57,6 +59,7 @@ var harmony_tags = [\drone];
     });
 
     if (instrument == \hat, {
+		beat_tag = [\offbeat, \random].choose;
         if (beat_tag == \offbeat, {
             attention = 1;
             attributes = (\amp: 0.2, \type: \note, \release: 0.05, \cutoff: 10e3);
@@ -79,6 +82,7 @@ var harmony_tags = [\drone];
     });
 
     if (instrument == \cymbal, {
+		beat_tag = \barline
         if (beat_tag == \barline, {
             attention = 15;
             attributes = (\type: \note, \amp: 0.1, \release: 6)
@@ -86,16 +90,18 @@ var harmony_tags = [\drone];
     });
 
     if (instrument == \ride, {
-        if (beat_tag == \barline, {
+		beat_tag = \barline
+		if (beat_tag == \barline, {
             attention = 9;
             attributes = (\type: \note, \amp: 0.1, \release: 4)
         });
     });
 
     if (instrument == \bass, {
-        sustained = true;
+		beat_tag = [\offbeat, \variation].choose;
+		sustained = true;
         if (beat_tag == \offbeat, {
-            attention = 1;
+            attention = 3;
             attributes = (
                 \type: \note,
                 \freq: scale.degreeToFreq(0.rrand(7), 60.midicps, -2),
@@ -108,7 +114,7 @@ var harmony_tags = [\drone];
         });
 
         if (beat_tag == \variation, {
-            attention = 3;
+            attention = 5;
             attributes = (
                 \type: \note,
                 \freq: scale.degreeToFreq(0.rrand(7), 60.midicps, -2),
@@ -122,6 +128,7 @@ var harmony_tags = [\drone];
     });
 
     if (instrument == \pad, {
+		beat_tag = [\barline, \backbeat].choose;
         if (beat_tag == \barline, {
             if (harmony_tag == \drone, {
                 var freqs = { scale.degreeToFreq((0..7).wchoose([ 10, 2, 5, 2, 5, 2, 5, 2 ].normalizeSum), root.midicps, -1) } ! 5;
@@ -135,7 +142,7 @@ var harmony_tags = [\drone];
                     \sustaintime: 4*60/tempo,
                     \reverb: 0.5
                 );
-                attention = 2;
+                attention = 4;
             });
         });
         if (beat_tag == \backbeat, {
@@ -155,6 +162,7 @@ var harmony_tags = [\drone];
     });
 
     if (instrument == \fm_stab, {
+		beat_tag = [\basebeat, \random]
         if (beat_tag == \basebeat, {
             attributes = (
                 \type: \note,
@@ -177,12 +185,13 @@ var harmony_tags = [\drone];
     });
 
     if (instrument == \bell, {
+		beat_tag = [\offbeat]
         if (beat_tag == \offbeat, {
             attributes = (
                 \type: \note,
                 \amp: 0.06
             );
-            attention = 4;
+            attention = 8;
         });
     });
 

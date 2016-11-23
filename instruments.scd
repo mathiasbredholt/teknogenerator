@@ -137,7 +137,7 @@ SynthDef(\pad, {
         EnvGen.kr(Env.perc(1e-3, 0.3), 1, cutoff - freq, freq)
     ]);
     var sig = Mix(LFSaw.ar((freq * Rand(0.998, 1.002) ! 2) * SinOsc.kr(Rand(0.5, 1), Rand(0, 2pi)).range(0.998, 1.002) ! 4, Rand(0, 1), 0.3)) * 0.05 * aEnv * amp;
-    var flt = BLowPass.ar(sig, fEnv + LFNoise2.kr(0.1).range(0, 1e3), 0.9);
+    var flt = BLowPass.ar(sig, fEnv, 0.9);
     sig = Compander.ar(flt, InFeedback.ar(~sidechain) * 4, 0.1, 1, 1/6, 0.01, 0.2);
     Out.ar(0, sig);
     Out.ar(~reverb, sig*reverb);
