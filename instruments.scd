@@ -145,7 +145,7 @@ SynthDef(\pad, {
 
 
 SynthDef(\fm_stab, {
-	arg freq = 100, amp = 0.1, attack = 0.1, release = 0.5, detune = 0.5;
+	arg freq = 50, amp = 0.1, attack = 0.1, release = 0.5, detune = 0.5;
 	var partials = [ 1+detune, 2+detune, 4+detune, 12+detune];
 	var indexes = [ 1, 2, 4, 8];
     var fm = 0;
@@ -162,7 +162,7 @@ SynthDef(\fm_stab, {
 	fm = fm * aEnv;
 	fm = BBandPass.ar(fm,freq+(fEnv*1000),1.5);
 	Out.ar(0,(fm*amp));
-}).add;
+}).play;
 
 SynthDef(\bell, {
 	arg gate=1, freq=100, decay=0.6, amp=1, reverb = 0.5;
