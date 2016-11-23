@@ -82,7 +82,7 @@ var harmony_tags = [\drone];
     });
 
     if (instrument == \cymbal, {
-		beat_tag = \barline
+		beat_tag = \barline;
         if (beat_tag == \barline, {
             attention = 15;
             attributes = (\type: \note, \amp: 0.1, \release: 6)
@@ -90,7 +90,7 @@ var harmony_tags = [\drone];
     });
 
     if (instrument == \ride, {
-		beat_tag = \barline
+		beat_tag = \barline;
 		if (beat_tag == \barline, {
             attention = 9;
             attributes = (\type: \note, \amp: 0.1, \release: 4)
@@ -162,7 +162,7 @@ var harmony_tags = [\drone];
     });
 
     if (instrument == \fm_stab, {
-		beat_tag = [\basebeat, \random]
+		beat_tag = [\basebeat, \random];
         if (beat_tag == \basebeat, {
             attributes = (
                 \type: \note,
@@ -185,7 +185,7 @@ var harmony_tags = [\drone];
     });
 
     if (instrument == \bell, {
-		beat_tag = [\offbeat]
+		beat_tag = [\offbeat];
         if (beat_tag == \offbeat, {
             attributes = (
                 \type: \note,

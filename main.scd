@@ -22,8 +22,8 @@ thisThread.randSeed = seed;
 
 // Generate array of random grains
 root = 55.rrand(66);
-scale = [ Scale.minorPentatonic, Scale.majorPentatonic, Scale.dorian ].choose;
-//scale = [ Scale.chromatic24 ].choose;
+//scale = [ Scale.minorPentatonic, Scale.majorPentatonic, Scale.dorian ].choose;
+scale = [ Scale.chromatic24 ].choose;
 grains = { ~generate.value(Tempo.bpm, scale, root) } ! num_grains;
 
 
@@ -48,12 +48,12 @@ g = Group.new(s);
 
 fork {
     loop {
-        var seq, attention_array, attention_mean = 1.0.rrand(8.0);
+        var seq, attention_array, tmp, attention_median = 6, deviation_min =5 , mu, dev, median;
 
         //thisThread.randSeed = seed;
 
         seq = ();
-        attention_array = [];
+        attention_array = [0];
 
 
         // ----- Fill sequence with silence -------
@@ -109,11 +109,18 @@ fork {
                 index = 0;
             });
 
-            // If there is no audible grain already at the chosen position
-            // and the total attention is less than max attention
-            if (
-                (seq[grain[\instrument]][\seq][\type][index] == \rest) &&
-                ((attention_array ++ [grain[\attention]]).mean < attention_mean), {
+
+			// Mean and standeard deviation of attention array
+			tmp = attention_array ++ [grain[\attention]];
+			mu = tmp.mean;
+			median = tmp[(tmp.size/2).asInt];
+			dev = ((tmp - mu)**2).sum/(tmp.size);
+			 // If there is no audible grain already at the chosen position
+			// and the grain doesn't violate attention attention parameters
+
+			if (
+                //(seq[grain[\instrument]][\seq][\type][index] == \rest) &&
+				(median < attention_median) && (dev>deviation_min), {
                     // Change the attributes of the grain to non-silent
                     grain[\attributes].keysValuesDo {
                         arg key, value;
@@ -123,6 +130,7 @@ fork {
                     if (grain[\attention] > 0, {
                         attention_array = attention_array ++ [grain[\attention]];
                         });
+
             });
 
             seq[grain[\instrument]][\sustained] = grain[\sustained]

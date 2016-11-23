@@ -162,7 +162,7 @@ SynthDef(\fm_stab, {
 	fm = fm * aEnv;
 	fm = BBandPass.ar(fm,freq+(fEnv*1000),1.5);
 	Out.ar(0,(fm*amp));
-}).play;
+}).add;
 
 SynthDef(\bell, {
 	arg gate=1, freq=100, decay=0.6, amp=1, reverb = 0.5;
