@@ -22,8 +22,8 @@ thisThread.randSeed = seed;
 
 // Generate array of random grains
 root = 55.rrand(66);
-scale = [ Scale.minorPentatonic, Scale.majorPentatonic, Scale.dorian, Scale.mixolydian, Scale.major ].choose;
-// scale = [ Scale.chromatic24 ].choose;
+// scale = [ Scale.majorPentatonic, Scale.minorPentatonic, Scale.dorian ].choose;
+scale = [ Scale.chromatic24 ].choose;
 grains = { ~generate.value(Tempo.bpm, scale, root) } ! num_grains;
 
 
@@ -45,10 +45,9 @@ Tempo.bpm = 127;
 g = Group.new(s);
 
 
-
 fork {
     loop {
-        var seq, attention_array, attention_mean = 1.rrand(8);
+        var seq, attention_array, attention_mean = 1.0.rrand(4.0);
 
         //thisThread.randSeed = seed;
 
