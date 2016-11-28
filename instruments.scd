@@ -19,7 +19,7 @@ SynthDef(\sd, {
     var sig = WhiteNoise.ar * aEnv * amp;
     sig = sig + (SinOsc.ar(300, 0, 0.5) * aEnv);
     Out.ar(0, sig * 0.4 ! 2);
-    Out.ar(~reverb, sig * reverb ! 2);
+    // Out.ar(~reverb, sig * reverb ! 2);
 }).add;
 
 SynthDef(\clap, {
@@ -40,7 +40,7 @@ SynthDef(\hat,{
     sig = (WhiteNoise.ar + sig) * aEnv * 0.1 * amp;
     sig = HPF.ar(sig, cutoff);
     Out.ar(0, sig ! 2);
-    Out.ar(~reverb, sig * reverb ! 2);
+    // Out.ar(~reverb, sig * reverb ! 2);
 }).add;
 
 SynthDef(\tone, {
@@ -126,7 +126,7 @@ SynthDef(\bass, {
     var aEnv = EnvGen.kr(Env.linen(0.01, sustain_time, 0.04, 1, -4), doneAction: 2);
     var fEnv = EnvGen.kr(Env.perc(1e-3, filter_release), 1, cutoff - freq, freq);
     var sig = Mix(LFSaw.ar(Line.kr(In.kr(~bass_freq), freq, 0.05) * Rand(0.99, 1.01) ! 4, Rand(0, 1), 0.3)) * 0.3 * amp;
-    var flt = MoogLadder.ar(sig, fEnv, rez) * aEnv;
+    var flt = MoogLadder.ar(sig, fEnv, rez) * 0.5 * aEnv;
     ReplaceOut.kr(~bass_freq, DelayN.kr(freq, 0.05, 0.05));
     Out.ar(0, flt ! 2);
     // Out.ar(~reverb, sig * reverb ! 2);

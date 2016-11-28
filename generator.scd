@@ -4,13 +4,10 @@ var beat_tags = [\basebeat, \random, \offbeat, \break, \backbeat, \variation, \b
 // var harmony_tags = [\root, \variation, \drone];
 var harmony_tags = [\drone, \root];
 
-~all_instruments = [\bd, \clap, \hat, \sd, \bass, \bell, \ride, \cymbal ];
+~all_instruments = [\bd, \clap, \hat, \sd, \bass, \bell, \pad, \ride, \cymbal, \fm_stab ];
 // ~all_instruments= [\bass];
 
 ~init_generation = {
-    arg seed = 0;
-    thisThread.randSeed = seed;
-
     ~default_attributes = (
         \bd: (\type: \rest, \sustain_time: 0.05.rrand(0.2), \amp: 1, \freq: 50.0.rrand(65.0), \release: 0.5.rrand(2.0), \distort: 0.0.rrand(0.8)),
         \sd: (\type: \rest, \amp: 0.4, \release: 0.02.rrand(0.2), \reverb: 0.001.exprand(0.05)),
@@ -39,12 +36,13 @@ var harmony_tags = [\drone, \root];
 };
 
 ~generate = {
-    arg tempo = 127, scale, root = 60;
+    arg tempo = 127, scale, root = 60, res;
     var beat_tag;
     var harmony_tag;
     var instrument = ~all_instruments.choose;
     var attributes = ~default_attributes[instrument].copy;
     var attention = ~default_attention[instrument].copy;
+    var index  = 0;
     var sustained = false;
 
     if (instrument == \bd, {
@@ -156,7 +154,35 @@ var harmony_tags = [\drone, \root];
         });
     });
 
-    (\instrument: instrument, \beat_tag: beat_tag, \sustained: sustained, \attention: attention, \attributes: attributes)
+    if (beat_tag == \basebeat, {
+        index = (res/4) * 4.rand;
+    });
+
+    if (beat_tag == \backbeat, {
+        index = ((res/2).asInt * 2.rand + (res/4));
+    });
+
+    if (beat_tag == \offbeat, {
+        index = ((res/4).asInt * 4.rand + (res/8));
+    });
+
+    if (beat_tag == \random, {
+        index = res.rand;
+    });
+
+    if (beat_tag == \variation, {
+        index = ((res/8).asInt * 8.rand + ((res/8).rand));
+    });
+
+    if (beat_tag == \barline, {
+        index = 0;
+    });
+
+    if (beat_tag == \rhythmic_variation, {
+        index = 0;
+    });
+
+    (\instrument: instrument, \beat_tag: beat_tag, \sustained: sustained, \attention: attention, \attributes: attributes, \index: index)
 };
 
 ~swingify = Prout({ |ev|

@@ -16,10 +16,8 @@ var num_grains = 512;
 var seq_duration = 4;
 var seed = (2**15).rand.round;
 
-var root, scale, grains;
+var root, scale, grains, state_rand;
 // seed = 6044;
-
-var state = 0;
 
 /*
 STATES:
@@ -34,39 +32,80 @@ STATES:
 thisThread.randSeed = seed;
 ("seed: " + seed).postln;
 
-// Generate array of random grains
-root = 55.rrand(66);
-scale = [ Scale.majorPentatonic, Scale.minorPentatonic, Scale.dorian, Scale.lydian ].choose;
-// scale = [ Scale.chromatic24 ].choose;
-~init_generation.value(seed);
-grains = { ~generate.value(Tempo.bpm, scale, root) } ! num_grains;
+
+~create_song = {
+    state_rand = { 5.rand } ! 256;
+
+    // Generate array of random grains
+    root = 55.rrand(66);
+    scale = [ Scale.majorPentatonic, Scale.minorPentatonic, Scale.dorian, Scale.lydian ].choose;
+    // scale = [ Scale.chromatic24 ].choose;
+    ~init_generation.value;
+    grains = { ~generate.value(Tempo.bpm, scale, root, res) } ! num_grains;
 
 
 
-// translates from
-//(\instrument: \bd, \beat_tag: \basebeat, \sustained: false, \attention: 2, \attributes: (\amp: 0.1))
-// to
-// (\bd: (\sustained: false, \seq: (\amp: [1, 0, 1, 0, 1, 0, 1 ..], \type: [rest, note, rest, note ...])))
-// 1, 0, 1, 0, 1, 0, 1 ..
-// rest, note, rest, note ...
+    // translates from
+    //(\instrument: \bd, \beat_tag: \basebeat, \sustained: false, \attention: 2, \attributes: (\amp: 0.1))
+    // to
+    // (\bd: (\sustained: false, \seq: (\amp: [1, 0, 1, 0, 1, 0, 1 ..], \type: [rest, note, rest, note ...])))
+    // 1, 0, 1, 0, 1, 0, 1 ..
+    // rest, note, rest, note ...
 
-Tempo.bpm = 127;
+    Tempo.bpm = 127;
 
-~all_instruments.do {
-    arg instr;
-    Pdef((instr ++ "_pat").asSymbol).play;
-};
+    ~all_instruments.do {
+        arg instr;
+        Pdef((instr ++ "_pat").asSymbol).play;
+    };
 
-g = Group.new(s);
+    g = Group.new(s);
 
 
-fork {
-    loop {
+    fork {
+        var is_playing = true;
         var bar_count = 0;
-        loop {
-            var seq, attention_array, tmp, attention_mean = 2.5, deviation = 0.2, mu, dev, median, swing = 0.0.rrand(0.5);
+        var state = 0;
+        var state_count = 0;
+        var attention_mean = 0;
+        var attention_mean_calc = [ 1.3.rrand(1.5),  1.7.rrand(2.0), 0.0, 2.0.rrand(2.5), 0.0];
 
-            thisThread.randSeed = seed;
+        while({ is_playing }, {
+            var seq, attention_array, tmp, deviation = 0.2, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
+
+            if (bar_count == 0, {
+                ("Progress: "++state_count).postln;
+                if (state_count < 10, {
+                    state_count = state_count + 1
+                }, {
+                    state = 4;
+                });
+
+                attention_mean = attention_mean_calc[state];
+
+                ("State: "++state).postln;
+                switch(state,
+                    0, {
+                        state = [ 0, 1 ].choose;
+                    },
+                    1, {
+                        state = [ 1, 0, 2, 3 ].choose;
+                    },
+                    2, {
+                        state = [ 2, 3, 0 ].choose;
+                    },
+                    3, {
+                        state = [ 3, 0 ].choose;
+                    },
+                    4, {
+                        // begin new song
+                        is_playing = false;
+                    }
+                );
+            });
+
+
+            // thisThread.randSeed = seed;
 
             // Creates the 4-bar feelin'
             if(bar_count > 2, {
@@ -102,35 +141,6 @@ fork {
                 arg grain;
                 var index = 0;
 
-                if (grain[\beat_tag] == \basebeat, {
-                    index = (res/4) * 4.rand;
-                });
-
-                if (grain[\beat_tag] == \backbeat, {
-                    index = ((res/2).asInt * 2.rand + (res/4));
-                });
-
-                if (grain[\beat_tag] == \offbeat, {
-                    index = ((res/4).asInt * 4.rand + (res/8));
-                });
-
-                if (grain[\beat_tag] == \random, {
-                    index = res.rand;
-                });
-
-                if (grain[\beat_tag] == \variation, {
-                    index = ((res/8).asInt * 8.rand + ((res/8).rand));
-                });
-
-                if (grain[\beat_tag] == \barline, {
-                    index = 0;
-                });
-
-                if (grain[\beat_tag] == \rhythmic_variation, {
-                    index = 0;
-                });
-
-
                 // Mean and standeard deviation of attention array
                 tmp = attention_array ++ [grain[\attention]];
                 mu = tmp.mean;
@@ -145,7 +155,7 @@ fork {
                         // Change the attributes of the grain to non-silent
                         grain[\attributes].keysValuesDo {
                             arg key, value;
-                            seq[grain[\instrument]][\seq][key][index] = value;
+                            seq[grain[\instrument]][\seq][key][grain[\index]] = value;
                         };
 
                         attention_array = attention_array ++ [grain[\attention]];
@@ -181,17 +191,15 @@ fork {
                 ), Pbind(*pattern.asPairs), (swingBase: 0.5, swingAmount: swing, swingThreshold: 0.1)));
                 // });
             };
-
             seq_duration.wait;
+            bar_count = (bar_count + 1) % 4;
+        });
 
-            if (bar_count < 3, {
-                bar_count = bar_count + 1;
-            }, {
-                bar_count = 0;
-            });
-        }
-    }
+        ~create_song.value;
+    };
 };
+
+~create_song.value;
 
 {
     var master_in = In.ar(0, 2);
