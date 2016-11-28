@@ -1,31 +1,33 @@
 (
 ~sidechain = 20;
 ~reverb = 22;
+~bass_freq = Bus.control(s).set(440);
 
 SynthDef(\bd, {
-    arg amp = 1, startFreq = 250, endFreq = 50, freqEnvTime = 0.05, sustain_time = 0, release = 1, distort = 0;
+    arg amp = 1, freq = 50, sustain_time = 0, release = 1, distort = 0;
     var aEnv = EnvGen.kr(Env.linen(1e-3, sustain_time, release, 1, -4), doneAction: 2);
     // var sig = SinOsc.ar(XLine.kr(startFreq, endFreq, freqEnvTime)) * aEnv * amp;
-    var sig = Ringz.ar(Impulse.ar(1), 50, release) * 0.08 * amp * aEnv;
-    sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort);
+    var sig = Ringz.ar(Impulse.ar(1), freq, release) * 0.08 * amp * aEnv;
+    sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort) * aEnv;
     Out.ar(0, sig ! 2);
     Out.ar(~sidechain, sig ! 2);
 }).add;
 
 SynthDef(\sd, {
-    arg amp = 0.1, release = 0.02;
+    arg amp = 0.1, release = 0.02, reverb = 0.1;
     var aEnv = EnvGen.kr(Env.perc(1e-3, release), doneAction: 2);
     var sig = WhiteNoise.ar * aEnv * amp;
     sig = sig + (SinOsc.ar(300, 0, 0.5) * aEnv);
-    Out.ar(0, sig * 0.05 ! 2);
+    Out.ar(0, sig * 0.4 ! 2);
+    Out.ar(~reverb, sig * reverb ! 2);
 }).add;
 
 SynthDef(\clap, {
-    arg amp = 1, release = 0.1, reverb = 0;
+    arg amp = 1, release = 0.1, reverb = 0, lfo = 50, cutoff = 1e3;
     // var aEnv = EnvGen.kr(Env([1, 0, 1, 0, 1, 0], [ time, 0, time, 0, time], -4), doneAction: 2);
     var aEnv = EnvGen.kr(Env.perc(1e-3, release), doneAction: 2);
-    var aEnv2 = LFPulse.kr(50).range(0,1) * EnvGen.kr(Env.linen(1e-3, 0.02, 0, 1));
-    var sig = Mix(BBandPass.ar([ WhiteNoise.ar * aEnv2, WhiteNoise.ar  * 0.05 * aEnv ], [1e3, 8e3], 4)) * 0.7 * amp;
+    var aEnv2 = LFPulse.kr(lfo).range(0,1) * EnvGen.kr(Env.linen(1e-3, 0.02 + (release * 0.15), 0, 1));
+    var sig = Mix(BBandPass.ar([ WhiteNoise.ar * aEnv2, WhiteNoise.ar  * 0.1 * aEnv ], [cutoff, 8e3], 4)) * 0.7 * amp;
     sig = [sig, DelayC.ar(sig, 0.0007, 0.0007)];
     Out.ar(0, sig);
     // Out.ar(~reverb, HPF.ar(sig, 4e3) * reverb);
@@ -33,8 +35,9 @@ SynthDef(\clap, {
 
 SynthDef(\hat,{
     arg amp = 0.1, attack = 1e-3, release = 0.1, cutoff = 1000, reverb = 0.01;
-    var aEnv = EnvGen.kr(Env.perc(attack, release, 1, -8), doneAction: 2);
-    var sig = WhiteNoise.ar * aEnv * 0.2 * amp;
+    var sig = SinOsc.ar(5e3 + LFTri.ar(5e3, 0, 5e3 * 15));
+    var aEnv = EnvGen.kr(Env.perc(attack, release, 1, -4), doneAction: 2);
+    sig = (WhiteNoise.ar + sig) * aEnv * 0.1 * amp;
     sig = HPF.ar(sig, cutoff);
     Out.ar(0, sig ! 2);
     Out.ar(~reverb, sig * reverb ! 2);
@@ -100,9 +103,9 @@ SynthDef(\cymbal, {
 
     // The hit is added to signal, together with some of the low driving noise
     sig = ((sig * 1) + (lodriver * 2) + (excitation * 2)).dup;
-    sig = sig *EnvGen.ar(Env.perc(1e-3, release, 1, -32), doneAction: 2);
+    sig = sig *EnvGen.ar(Env.perc(1e-3, release, 1, -64), doneAction: 2);
 
-	Out.ar(0, sig*0.5*amp);
+    Out.ar(0, (sig * 100).distort*0.02*amp);
 
 }).add;
 
@@ -119,24 +122,27 @@ SynthDef(\ride,{
 }).add;
 
 SynthDef(\bass, {
-    arg amp = 1, freq = 50, rez = 0, gate = 1, filter_release = 0.05, cutoff = 15e3, t_trig = 1, portamento = 0.03;
-    var dEnv = EnvGen.kr(Env.adsr(0.01, 1, 1, 0.1), gate, doneAction: 2);
-    var sig = Mix(LFSaw.ar(Lag.kr(Gate.kr(freq, (-1 + ((freq>20)*2))), portamento) * Rand(0.99, 1.01) ! 4, Rand(0, 1), 0.3)) * 0.1 * amp;
-    var flt = MoogLadder.ar(sig, Lag.kr(Gate.kr(cutoff, (-1 + ((freq>20)*2))), 0.1), rez);
+    arg amp = 1, freq = 50, rez = 0, filter_release = 0.05, sustain_time = 0, cutoff = 15e3, reverb = 0.01;
+    var aEnv = EnvGen.kr(Env.linen(0.01, sustain_time, 0.04, 1, -4), doneAction: 2);
+    var fEnv = EnvGen.kr(Env.perc(1e-3, filter_release), 1, cutoff - freq, freq);
+    var sig = Mix(LFSaw.ar(Line.kr(In.kr(~bass_freq), freq, 0.05) * Rand(0.99, 1.01) ! 4, Rand(0, 1), 0.3)) * 0.3 * amp;
+    var flt = MoogLadder.ar(sig, fEnv, rez) * aEnv;
+    ReplaceOut.kr(~bass_freq, DelayN.kr(freq, 0.05, 0.05));
     Out.ar(0, flt ! 2);
+    // Out.ar(~reverb, sig * reverb ! 2);
 }).add;
 
 SynthDef(\pad, {
-    arg freq = 440, amp = 1, sustaintime = 2, cutoff = 500, env_type = 0, reverb = 0.2;
+    arg freq = 440, amp = 1, sustain_time = 2, cutoff = 500, env_type = 0, reverb = 0.2;
     var aEnv = Select.kr(env_type, [
-        EnvGen.kr(Env.linen(0.1, sustaintime, 0.1, 1, -4), doneAction: 2),
+        EnvGen.kr(Env.linen(0.1, sustain_time, 0.1, 1, -4), doneAction: 2),
         EnvGen.kr(Env.perc(1e-3, 1))
     ]);
     var fEnv = Select.kr(env_type, [
         EnvGen.kr(Env.linen(1, 0, 1, 2, -4), 1, cutoff - freq, freq),
         EnvGen.kr(Env.perc(1e-3, 0.3), 1, cutoff - freq, freq)
     ]);
-    var sig = Mix(LFSaw.ar((freq * Rand(0.998, 1.002) ! 2) * SinOsc.kr(Rand(0.5, 1), Rand(0, 2pi)).range(0.998, 1.002) ! 4, Rand(0, 1), 0.3)) * 0.05 * aEnv * amp;
+    var sig = Mix(LFSaw.ar((freq * Rand(0.998, 1.002) ! 2) * SinOsc.kr(Rand(0.5, 1), Rand(0, 2pi)).range(0.998, 1.002) ! 4, Rand(0, 1), 0.3)) * 0.02 * aEnv * amp;
     var flt = BLowPass.ar(sig, fEnv, 0.9);
     sig = Compander.ar(flt, InFeedback.ar(~sidechain) * 4, 0.1, 1, 1/6, 0.01, 0.2);
     Out.ar(0, sig);
