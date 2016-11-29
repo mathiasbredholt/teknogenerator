@@ -1,6 +1,6 @@
 (
 var max_attention = 10;
-var beat_tags = [\basebeat, \random, \offbeat, \break, \backbeat, \variation, \barline, \silence];
+var beat_tags = [\basebeat, \random, \offbeat, \break, \backbeat, \variation, \barline ];
 // var harmony_tags = [\root, \variation, \drone];
 var harmony_tags = [\drone, \root];
 
@@ -113,7 +113,8 @@ var harmony_tags = [\drone, \root];
         harmony_tag = [\root, \drone].choose;
         attributes[\type] = \note;
         if (harmony_tag == \drone, {
-            var freqs = { scale.degreeToFreq((0..7).wchoose([ 10, 2, 5, 2, 5, 2, 5, 2 ].normalizeSum), root.midicps, -1) } ! 3;
+            var octave = [-1, 1].choose;
+            var freqs = { scale.degreeToFreq((0..7).wchoose([ 10, 2, 5, 2, 5, 2, 5, 2 ].normalizeSum), root.midicps, octave) } ! 3;
             attributes.keysValuesChange { |key, value| value * 0.99.rrand(1.01) };
             attributes[\freq] = freqs;
             attributes[\amp] = 0.05;
@@ -177,10 +178,6 @@ var harmony_tags = [\drone, \root];
     });
 
     if (beat_tag == \barline, {
-        index = 0;
-    });
-
-    if (beat_tag == \rhythmic_variation, {
         index = 0;
     });
 
