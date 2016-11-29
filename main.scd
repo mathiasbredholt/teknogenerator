@@ -11,8 +11,8 @@
 */
 
 (
-var res = 64;
-var num_grains = 512;
+var res = 32;
+var num_grains = 256;
 var seq_duration = 4;
 var seed = (2**15).rand.round;
 
@@ -34,6 +34,7 @@ thisThread.randSeed = seed;
 
 
 ~create_song = {
+    var bars = 2;
     state_rand = { 5.rand } ! 256;
 
     // Generate array of random grains
@@ -41,9 +42,7 @@ thisThread.randSeed = seed;
     scale = [ Scale.majorPentatonic, Scale.minorPentatonic, Scale.dorian, Scale.lydian ].choose;
     // scale = [ Scale.chromatic24 ].choose;
     ~init_generation.value;
-    grains = { ~generate.value(Tempo.bpm, scale, root, res) } ! num_grains;
-
-
+    grains = { ~generate.value(Tempo.bpm, scale, root, res, bars) } ! num_grains;
 
     // translates from
     //(\instrument: \bd, \beat_tag: \basebeat, \sustained: false, \attention: 2, \attributes: (\amp: 0.1))
@@ -68,17 +67,17 @@ thisThread.randSeed = seed;
         var state = 0;
         var state_count = 0;
         var attention_mean = 0;
-        var attention_mean_calc = [ 1.3.rrand(1.5),  1.7.rrand(2.0), 0.0, 2.0.rrand(2.5), 0.0];
+        var attention_mean_calc = [ 1.0.rrand(1.5),  1.7.rrand(2.0), 0.1, 2.0.rrand(2.5), 0.0];
 
         while({ is_playing }, {
-            var seq, attention_array, tmp, deviation = 0.2, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
+            var seq, attention_array, tmp, deviation = 0.7, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
 
             if (bar_count == 0, {
                 ("Progress: "++state_count).postln;
                 if (state_count < 10, {
                     state_count = state_count + 1
                 }, {
-                    state = 4;
+                    is_playing = false;
                 });
 
                 attention_mean = attention_mean_calc[state];
@@ -96,24 +95,16 @@ thisThread.randSeed = seed;
                     },
                     3, {
                         state = [ 3, 0 ].choose;
-                    },
-                    4, {
-                        // begin new song
-                        is_playing = false;
                     }
                 );
             });
 
-
-            // thisThread.randSeed = seed;
-
             // Creates the 4-bar feelin'
             if(bar_count > 2, {
-                attention_mean = attention_mean * 1.25;
+                attention_mean = attention_mean * [ 1.25, 0.75 ].choose;
             });
 
             swing = 0;
-
 
             seq = ();
             attention_array = [-1];
@@ -130,7 +121,7 @@ thisThread.randSeed = seed;
                 ~default_attributes[instr].keysValuesDo {
                     arg key, value;
                     // For each attribute add a list of repeated default values
-                    seq[instr][\seq].add(key -> (value ! res));
+                    seq[instr][\seq].add(key -> (value ! (res * bars)));
                 }
             };
 
@@ -139,7 +130,6 @@ thisThread.randSeed = seed;
             // Iterate through grain array
             grains.do {
                 arg grain;
-                var index = 0;
 
                 // Mean and standeard deviation of attention array
                 tmp = attention_array ++ [grain[\attention]];
@@ -191,7 +181,7 @@ thisThread.randSeed = seed;
                 ), Pbind(*pattern.asPairs), (swingBase: 0.5, swingAmount: swing, swingThreshold: 0.1)));
                 // });
             };
-            seq_duration.wait;
+            (seq_duration*bars).wait;
             bar_count = (bar_count + 1) % 4;
         });
 
@@ -207,8 +197,8 @@ thisThread.randSeed = seed;
 
     var reverb = GVerb.ar(reverb_in[0], 10.rrand(150), 0.5.rrand(6.0), 0.2, 0.5, 30, drylevel: 0, earlyreflevel: 0.3, taillevel: 0.4);
 
-    var mix = master_in + Compander.ar(reverb, In.ar(~sidechain) * 8, 0.05, 1, 1/4, 0.01, 0.2);
-    var compressor = Compander.ar(mix, mix * 1.5, 0.05, 1, 1/3) * 1.5;
+    var mix = master_in + Compander.ar(reverb, In.ar(~sidechain) * 4, 0.1, 1, 1/4, 0.05, 0.2);
+    var compressor = Compander.ar(mix, mix, 0.05, 1, 1/3, 0.05, 0.1) * 1.5;
     var master_out =  Limiter.ar(compressor, 0.97, 0.02);
 
     ReplaceOut.ar(0, master_out);
