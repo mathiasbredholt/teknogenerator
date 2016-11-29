@@ -195,10 +195,10 @@ thisThread.randSeed = seed;
     var master_in = In.ar(0, 2);
     var reverb_in = In.ar(~reverb, 2);
 
-    var reverb = GVerb.ar(reverb_in[0], 10.rrand(150), 0.5.rrand(6.0), 0.2, 0.5, 30, drylevel: 0, earlyreflevel: 0.3, taillevel: 0.4);
+    var reverb = GVerb.ar(reverb_in[0], 10.rrand(150), 0.5.rrand(4.0), 0.2, 0.5, 30, drylevel: 0, earlyreflevel: 1, taillevel: 1);
 
     var mix = master_in + Compander.ar(reverb, In.ar(~sidechain) * 4, 0.1, 1, 1/4, 0.05, 0.2);
-    var compressor = Compander.ar(mix, mix, 0.05, 1, 1/3, 0.05, 0.1) * 1.5;
+    var compressor = Compander.ar(mix, mix, 0.01, 1, 1/3, 0.05, 0.1) * 2;
     var master_out =  Limiter.ar(compressor, 0.97, 0.02);
 
     ReplaceOut.ar(0, master_out);

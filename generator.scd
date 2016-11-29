@@ -16,9 +16,9 @@ var harmony_tags = [\drone, \root];
         \ride: (\type: \rest, \release: 2.0.rrand(5), \amp: 0.1),
         \cymbal: (\type: \rest, \release: 2.0.rrand(8.0), \amp: 0.1, \reverb: 0.001.exprand(0.05)),
         \bass: (\type: \rest, \amp: 1, \freq: 50, \rez: 0.0.rrand(0.4), \filter_release: 0.01.exprand(1.0), \cutoff: 500.rrand(5e3), \sustain_time: 0.5),
-        \pad: (\type: \rest, \freq: 440, \amp: 1, \sustain_time: 2, \cutoff: 1e3.rrand(15e3), \env_type: 0, \reverb: 0.1),
+        \pad: (\type: \rest, \freq: 440, \amp: 1, \sustain_time: 2, \cutoff: 1e3.rrand(15e3), \env_type: 0, \reverb: 0.2),
         \fm_stab: (\type: \rest, \freq: 100, \amp: 0.1, \attack: 0.1, \release: 0.5, \detune: 0.5),
-        \bell: (\type: \rest, \freq: 200.0.exprand(1200.0), \decay: 0.1.rrand(0.9), \amp: 0.1, \reverb: 0.0.rrand(0.5))
+        \bell: (\type: \rest, \freq: 200.0.exprand(1200.0), \decay: 0.1.rrand(0.9), \amp: 0.1, \reverb: 0.0.rrand(0.1))
     );
 
     ~default_attention = (
@@ -28,7 +28,7 @@ var harmony_tags = [\drone, \root];
         \hat: 1,
         \ride: 10,
         \cymbal: 10,
-        \bass: 8,
+        \bass: 3,
         \pad: 10,
         \fm_stab: 10,
         \bell: 5
@@ -77,7 +77,7 @@ var harmony_tags = [\drone, \root];
         attributes.keysValuesChange { |key, value| value * 0.5.rrand(1.5) };
         attributes[\release] = attributes[\release] * 0.5.exprand(20);
         if (beat_tag == \random, {
-            attention = 9;
+            attention = 7;
         });
     });
 
@@ -116,7 +116,7 @@ var harmony_tags = [\drone, \root];
             var freqs = { scale.degreeToFreq((0..7).wchoose([ 10, 2, 5, 2, 5, 2, 5, 2 ].normalizeSum), root.midicps, -1) } ! 3;
             attributes.keysValuesChange { |key, value| value * 0.99.rrand(1.01) };
             attributes[\freq] = freqs;
-            attributes[\amp] = 0.1;
+            attributes[\amp] = 0.05;
             attributes[\sustain_time] = (2*bars).rand*60/tempo;
             attributes[\cutoff] = 800;
             attributes[\env_type] = 0;
