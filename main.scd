@@ -77,7 +77,6 @@ thisThread.randSeed = seed;
 
         while({ is_playing }, {
             var seq, attention_array, tmp, deviation = 0.5, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
-
             if (bar_count == 0, {
                 ("Progress: "++state_count).postln;
                 if (state_count < 10, {
