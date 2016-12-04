@@ -4,8 +4,8 @@ var beat_tags = [\basebeat, \random, \offbeat, \break, \backbeat, \variation, \b
 // var harmony_tags = [\root, \variation, \drone];
 var harmony_tags = [\drone, \root];
 
-~all_instruments = [\bd, \clap, \hat, \bass, \pad, \bell, \fm_stab, \cymbal, \ride ];
-// ~all_instruments= [\bass];
+// ~all_instruments = [\bd, \clap, \hat, \bass, \pad, \bell, \fm_stab, \cymbal, \ride ];
+~all_instruments= [\cymbal];
 
 ~init_generation = {
     ~default_attributes = (
@@ -26,8 +26,8 @@ var harmony_tags = [\drone, \root];
         \sd: 4,
         \clap: 2,
         \hat: 1,
-        \ride: 10,
-        \cymbal: 10,
+        \ride: 1,
+        \cymbal: 1,
         \bass: 5,
         \pad: 10,
         \fm_stab: 10,

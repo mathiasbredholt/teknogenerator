@@ -108,20 +108,20 @@ SynthDef(\cymbal, {
     sig = ((sig * 1) + (lodriver * 2) + (excitation * 2)).dup;
     sig = sig *EnvGen.ar(Env.perc(1e-3, release, 1, -64), doneAction: 2);
 
-    Out.ar(0, (sig * 100).distort*0.02*amp);
+    Out.ar(~reverb, (sig * 100).distort*0.02*amp ! 2);
+
 
 }).add;
 
 SynthDef(\ride,{
-    arg release = 1, amp = 0.5, reverb = 0.03;
+    arg release = 1, amp = 0.5;
     var ampEnv = EnvGen.ar(Env.perc(0,release, 1, -8),doneAction: 2);
     var freqEnv = EnvGen.ar(Env.perc(0,release*0.8))*20000;
     var sig = Klank.ar(`[{exprand(500, 20000)}.dup(100), nil, { release }.dup(100)], Impulse.ar(0.1)) * 1/100;
     sig = LPF.ar(sig,freqEnv+500);
     sig = sig * ampEnv;
 
-    Out.ar(0, (sig*amp) ! 2);
-    Out.ar(~reverb, sig * reverb ! 2);
+    Out.ar(~reverb, sig * amp ! 2);
 }).add;
 
 SynthDef(\bass_real, {
@@ -199,7 +199,7 @@ SynthDef(\fm_stab, {
 }).add;
 
 SynthDef(\bell, {
-    arg gate=1, freq=100, decay=0.6, amp=1, reverb = 0.05, distort = 1;
+    arg gate=1, freq=100, decay=0.6, amp=1, reverb = 0.05, distort = 1, delay = 0.5;
     var excitation, sig, aEnv, fEnv;
     excitation = WhiteNoise.ar(EnvGen.ar(Env.perc(0.0000001, 0.01)));
     sig = Klank.ar(`[
@@ -216,6 +216,7 @@ SynthDef(\bell, {
     sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.02));
     Out.ar(0, sig ! 2);
     Out.ar(~reverb, sig*reverb ! 2);
+    Out.ar(~delay, sig*delay ! 2);
 }).add;
 
 
