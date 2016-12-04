@@ -12,7 +12,7 @@
 
 (
 var res = 32;
-var num_grains = 256;
+var num_grains = 512;
 var seq_duration = 4;
 var seed = (2**15).rand.round;
 
@@ -85,7 +85,7 @@ thisThread.randSeed = seed;
 
 
         while({ is_playing }, {
-            var seq, attention_array, tmp, deviation = 0.5, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
+            var seq, attention_array, tmp, deviation = 0.2, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
             if (bar_count == 0, {
                 if (state_counter != nil, {
                     var count = state_counter.next;
