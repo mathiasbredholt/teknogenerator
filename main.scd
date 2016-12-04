@@ -24,7 +24,7 @@ STATES:
 0 - Minimal
 1 - Build-up
 2 - Break
-3 - Climax
+3 - Climax-
 4 - Outro
 */
 

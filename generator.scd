@@ -5,7 +5,7 @@ var beat_tags = [\basebeat, \random, \offbeat, \break, \backbeat, \variation, \b
 var harmony_tags = [\drone, \root];
 
 ~all_instruments = [\bd, \clap, \hat, \bass, \pad, \bell, \fm_stab, \cymbal, \ride ];
-// ~all_instruments= [\bass];
+// ~all_instruments= [\bd];
 
 ~init_generation = {
 	~default_attributes = (
@@ -24,15 +24,21 @@ var harmony_tags = [\drone, \root];
 	~default_attention = (
 		\bd: 0,
 		\sd: 4,
-		\clap: 2,
+		\clap: [2,5].choose,
 		\hat: 1,
-		\ride: 10,
+		\ride: [2,10].choose,
 		\cymbal: 10,
-		\bass: 5,
-		\pad: 10,
-		\fm_stab: 12,
-		\bell: 5
+		\bass: [5,10].choose,
+		\pad: [5,8,10].choose,
+		\fm_stab: [8,12,14].choose,
+		\bell: [2,5,10].choose;
 	);
+	m = ~default_attention.values.asArray.maxItem/10;
+	~default_attention.keysValuesChange({
+		arg key , value;
+		value/m;
+
+	});
 };
 
 ~generate = {
@@ -46,13 +52,13 @@ var harmony_tags = [\drone, \root];
 	var sustained = false;
 
 	if (instrument == \bd, {
-		beat_tag = [\basebeat, \variation].wchoose([5,1].normalizeSum);
+		beat_tag = [\basebeat, \variation].wchoose([6,1].normalizeSum);
 		attributes[\type] = \note;
 		attributes[\amp] = 1;
 
 		if(beat_tag == \variation, {
 			attributes[\amp] = 0.4;
-			attention = 1;
+			attention = 2;
 		});
 	});
 
