@@ -2,8 +2,7 @@
 ~sidechain = 20;
 ~reverb = 22;
 ~delay = 24;
-~bass_gate = Bus.control;
-~bass_freq = Bus.control.set(440);
+~bass_p = Bus.control(s, 8) ; // amp, freq, rez, filter_release, cutoff, distort, reverb, gate
 )
 
 (
@@ -126,10 +125,18 @@ SynthDef(\ride,{
 }).add;
 
 SynthDef(\bass_real, {
-    arg amp = 1, freq = 50, rez = 0, filter_release = 0.05, cutoff = 5e3, distort = 1, reverb = 0.05, gate = 0;
-    var aEnv = EnvGen.kr(Env.adsr(0.05, 1, 1, 0.05), In.kr(~bass_gate));
-    var fEnv = EnvGen.kr(Env.perc(0.05, 0.2), In.kr(~bass_gate), cutoff - 0.5e3, 0.5e3);
-    var sig = Mix(LFSaw.ar(Lag.kr(In.kr(~bass_freq), 0.4) * Rand(0.99, 1.01) ! 2, Rand(0, 1), 0.3)) * 0.3 * amp;
+    var p = In.kr(~bass_p, 8);
+    var amp = p[0],
+    freq = p[1],
+    rez = p[2],
+    filter_release = p[3],
+    cutoff = p[4],
+    distort = p[5],
+    reverb = p[6],
+    gate = p[7];
+    var aEnv = EnvGen.kr(Env.adsr(0.05, 1, 1, 0.05), gate);
+    var fEnv = EnvGen.kr(Env.perc(0.05, 0.2), gate, cutoff - 0.5e3, 0.5e3);
+    var sig = Mix(LFSaw.ar(Lag.kr(freq, 0.3) * Rand(0.99, 1.01) ! 2, Rand(0, 1), 0.3)) * 0.3 * amp;
     sig = MoogLadder.ar(sig, fEnv, rez) * 0.3 * aEnv;
     sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.02)) * aEnv * 0.5;
     sig = sig + Mix(DelayC.ar(sig, 0.2, SinOsc.kr(Rand(0.07, 0.1) ! 2, Rand(0, 2pi) ! 2, 0.03, 0.08), 0.02) ! 8);
@@ -140,9 +147,8 @@ SynthDef(\bass_real, {
 }).add;
 
 SynthDef(\bass, {
-    arg gateBus, freqBus, gate = 1, freq;
-    ReplaceOut.kr(~bass_gate, gate);
-    ReplaceOut.kr(~bass_freq, freq);
+    arg amp, freq, rez, filter_release, cutoff, distort, reverb, gate = 1;
+    ReplaceOut.kr(~bass_p, [amp, freq, rez, filter_release, cutoff, distort, reverb, gate]);
     EnvGen.kr(Env.asr(0,1,0), gate, doneAction: 2);
 }).add;
 

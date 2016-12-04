@@ -5,7 +5,7 @@ var beat_tags = [\basebeat, \random, \offbeat, \break, \backbeat, \variation, \b
 var harmony_tags = [\drone, \root];
 
 ~all_instruments = [\bd, \clap, \hat, \bass, \pad, \bell, \fm_stab, \cymbal, \ride ];
-// ~all_instruments= [\pad];
+// ~all_instruments= [\bass];
 
 ~init_generation = {
     ~default_attributes = (
@@ -102,8 +102,8 @@ var harmony_tags = [\drone, \root];
         attributes.keysValuesChange { |key, value| value * 0.5.rrand(1.5) };
         attributes[\freq] = scale.degreeToFreq(0.rrand(5), root.midicps, -2);
         attributes[\sustain_time] = [ 2 ].choose*60/tempo;
-        attributes[\legato] = [4, 16, 32, 64].wchoose([0.1, 0.2, 0.4, 0.3]);
-        // attributes[\cutoff] = 500.rrand(5e3);
+        attributes[\legato] = ({ arg i; 2**(i+1) } ! 6).choose;
+        attributes[\cutoff] = 500.rrand(10e3);
 
         if (beat_tag == \variation, {
             attention = attention * 3;

@@ -28,9 +28,8 @@ STATES:
 4 - Outro
 */
 
-~bass_gate.set(0);
+~bass_p.set(0 ! 8);
 Synth(\bass_real);
-
 
 thisThread.randSeed = seed;
 ("seed: " + seed).postln;
@@ -204,7 +203,8 @@ thisThread.randSeed = seed;
     var reverb_in = In.ar(~reverb, 2);
 
     var reverb = GVerb.ar(reverb_in[0], 10.rrand(150), 0.5.rrand(4.0), 0.2, 0.5, 30, drylevel: 0, earlyreflevel: 1, taillevel: 1);
-    var delay = CombC.ar(delay_in, 60/Tempo.bpm * 5/3, 60/Tempo.bpm * 5/3, 5);
+    var delaytime = 60/Tempo.bpm * [5/3, 4/3, 1/2, 1].choose;
+    var delay = AllpassC.ar(delay_in, delaytime, delaytime, 5);
 
     var mix = master_in + delay + Compander.ar(reverb, In.ar(~sidechain) * 4, 0.1, 1, 1/4, 0.05, 0.2);
     var compressor = Compander.ar(mix, mix, 0.08, 1, 1/3, 0.02, 0.05) * 1;
