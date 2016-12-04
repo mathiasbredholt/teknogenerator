@@ -17,7 +17,7 @@ var seq_duration = 4;
 var seed = (2**15).rand.round;
 
 var root, scale, grains, state_rand;
-// seed = 6044;
+// seed:  410
 
 /*
 STATES:
@@ -27,6 +27,9 @@ STATES:
 3 - Climax
 4 - Outro
 */
+
+~bass_gate.set(0);
+Synth(\bass_real);
 
 
 thisThread.randSeed = seed;
@@ -51,7 +54,7 @@ thisThread.randSeed = seed;
     // 1, 0, 1, 0, 1, 0, 1 ..
     // rest, note, rest, note ...
 
-    Tempo.bpm = 127;
+    Tempo.bpm = 135;
 
     ~all_instruments.do {
         arg instr;
@@ -67,10 +70,13 @@ thisThread.randSeed = seed;
         var state = 0;
         var state_count = 0;
         var attention_mean = 0;
-        var attention_mean_calc = [ 1.0.rrand(1.5),  1.7.rrand(2.0), 0.1, 2.0.rrand(2.5), 0.0];
+        var attention_mean_calc = [ 1.0.rrand(1.5),  1.7.rrand(2.0), 0.9, 2.2.rrand(3.0), 0.0];
+
+        // ("The time is "++Date.getDate.format("%H:%M") ++ " and you're listening to Techno Generator 3000").speak;
+
 
         while({ is_playing }, {
-            var seq, attention_array, tmp, deviation = 0.7, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
+            var seq, attention_array, tmp, deviation = 0.5, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
 
             if (bar_count == 0, {
                 ("Progress: "++state_count).postln;
@@ -92,6 +98,7 @@ thisThread.randSeed = seed;
                     },
                     2, {
                         state = [ 2, 3, 0 ].choose;
+                        deviation = 0.2;
                     },
                     3, {
                         state = [ 3, 0 ].choose;
@@ -193,15 +200,18 @@ thisThread.randSeed = seed;
 
 {
     var master_in = In.ar(0, 2);
+    var delay_in = In.ar(~delay, 2);
     var reverb_in = In.ar(~reverb, 2);
 
     var reverb = GVerb.ar(reverb_in[0], 10.rrand(150), 0.5.rrand(4.0), 0.2, 0.5, 30, drylevel: 0, earlyreflevel: 1, taillevel: 1);
+    var delay = CombC.ar(delay_in, 60/Tempo.bpm * 5/3, 60/Tempo.bpm * 5/3, 5);
 
-    var mix = master_in + Compander.ar(reverb, In.ar(~sidechain) * 4, 0.1, 1, 1/4, 0.05, 0.2);
-    var compressor = Compander.ar(mix, mix, 0.01, 1, 1/3, 0.05, 0.1) * 2;
+    var mix = master_in + delay + Compander.ar(reverb, In.ar(~sidechain) * 4, 0.1, 1, 1/4, 0.05, 0.2);
+    var compressor = Compander.ar(mix, mix, 0.08, 1, 1/3, 0.02, 0.05) * 0.7;
     var master_out =  Limiter.ar(compressor, 0.97, 0.02);
 
     ReplaceOut.ar(0, master_out);
 
 }.play(g, addAction: \addToTail);
 )
+2**63
