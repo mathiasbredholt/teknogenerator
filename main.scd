@@ -28,9 +28,8 @@ STATES:
 4 - Outro
 */
 
-~bass_gate.set(0);
+~bass_p.set(0 ! 8);
 Synth(\bass_real);
-
 
 thisThread.randSeed = seed;
 ("seed: " + seed).postln;
@@ -68,19 +67,29 @@ thisThread.randSeed = seed;
         var is_playing = true;
         var bar_count = 0;
         var state = 0;
-        var state_count = 0;
         var attention_mean = 0;
         var attention_mean_calc = [ 1.0.rrand(1.5),  1.7.rrand(2.0), 0.9, 2.2.rrand(3.0), 0.0];
 
         // ("The time is "++Date.getDate.format("%H:%M") ++ " and you're listening to Techno Generator 3000").speak;
 
+        var form = Pfsm([
+            #[ 0 ],
+            0, #[ 0, 1 ],
+            1, #[ 1, 2],
+            2, #[ 2, 3 ],
+            3, #[ 1, 2 ],
+            nil, nil
+        ], inf).asStream;
+
+        var state_counter = Pseries(0, 1, 10).asStream;
+
 
         while({ is_playing }, {
             var seq, attention_array, tmp, deviation = 0.5, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
             if (bar_count == 0, {
-                ("Progress: "++state_count).postln;
-                if (state_count < 10, {
-                    state_count = state_count + 1
+                if (state_counter != nil, {
+                    var count = state_counter.next;
+                    ("Progress: "++count).postln;
                 }, {
                     is_playing = false;
                 });
@@ -88,22 +97,10 @@ thisThread.randSeed = seed;
                 attention_mean = attention_mean_calc[state];
 
                 ("State: "++state).postln;
-                switch(state,
-                    0, {
-                        state = [ 0, 1 ].choose;
-                    },
-                    1, {
-                        state = [ 1, 0, 2, 3 ].choose;
-                    },
-                    2, {
-                        state = [ 2, 3, 0 ].choose;
-                        deviation = 0.2;
-                    },
-                    3, {
-                        state = [ 3, 0 ].choose;
-                    }
-                );
+                state = form.next;
             });
+
+
 
             // Creates the 4-bar feelin'
             if(bar_count > 2, {
@@ -202,11 +199,12 @@ thisThread.randSeed = seed;
     var delay_in = In.ar(~delay, 2);
     var reverb_in = In.ar(~reverb, 2);
 
-    var reverb = GVerb.ar(reverb_in[0], 10.rrand(150), 0.5.rrand(4.0), 0.2, 0.5, 30, drylevel: 0, earlyreflevel: 1, taillevel: 1);
-    var delay = CombC.ar(delay_in, 60/Tempo.bpm * 5/3, 60/Tempo.bpm * 5/3, 5);
+    var reverb = GVerb.ar(reverb_in[0], 100.rrand(150), 1.rrand(4.0), 0.5, 0.5, 15, drylevel: 0, earlyreflevel: 0.1, taillevel: 2);
+    var delaytime = 60/Tempo.bpm * [4/3, 2/3, 1/2, 1/4, 1/8, 1/6].choose;
+    var delay = AllpassC.ar(delay_in, delaytime, delaytime, 5);
 
     var mix = master_in + delay + Compander.ar(reverb, In.ar(~sidechain) * 4, 0.1, 1, 1/4, 0.05, 0.2);
-    var compressor = Compander.ar(mix, mix, 0.08, 1, 1/3, 0.02, 0.05) * 0.7;
+    var compressor = Compander.ar(mix, mix, 0.08, 1, 1/3, 0.02, 0.05) * 1;
     var master_out =  Limiter.ar(compressor, 0.97, 0.02);
 
     ReplaceOut.ar(0, master_out);
