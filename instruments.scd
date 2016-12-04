@@ -147,9 +147,9 @@ SynthDef(\bass, {
 }).add;
 
 SynthDef(\pad, {
-    arg freq = 100, amp = 1, sustain_time = 2, cutoff = 100, env_type = 0, reverb = 0.2, delay = 0.6, rez = 0.4, distort = 1;
+    arg freq = 100, amp = 1, sustain_time = 2, cutoff = 100, env_type = 0, reverb = 0.2, delay = 0.6, rez = 0.4;
     var aEnv = Select.kr(env_type, [
-        EnvGen.kr(Env.linen(0.1, sustain_time, 0.1, 1, -4), doneAction: 2),
+        EnvGen.kr(Env.linen(0.1, sustain_time, 0.1, 1, -4)),
         EnvGen.kr(Env.perc(1e-3, 1))
     ]);
     var fEnv = Select.kr(env_type, [
@@ -164,10 +164,11 @@ SynthDef(\pad, {
         )
     ) * 0.02 * aEnv * amp;
     sig = BLowPass.ar(sig, fEnv, rez);
-    sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.01));
+    sig = sig + Mix(DelayC.ar(sig, 0.2, SinOsc.kr(Rand(0.07, 0.1) ! 2, Rand(0, 2pi) ! 2, 0.03, 0.1), 0.04) ! 8);
     Out.ar(0, sig);
     Out.ar(~reverb, sig*reverb);
     Out.ar(~delay, sig*delay);
+    EnvGen.kr(Env.linen(0.1, sustain_time, 1), doneAction: 2);
 }).add;
 
 

@@ -207,7 +207,7 @@ thisThread.randSeed = seed;
     var delay = CombC.ar(delay_in, 60/Tempo.bpm * 5/3, 60/Tempo.bpm * 5/3, 5);
 
     var mix = master_in + delay + Compander.ar(reverb, In.ar(~sidechain) * 4, 0.1, 1, 1/4, 0.05, 0.2);
-    var compressor = Compander.ar(mix, mix, 0.08, 1, 1/3, 0.02, 0.05) * 0.7;
+    var compressor = Compander.ar(mix, mix, 0.08, 1, 1/3, 0.02, 0.05) * 1;
     var master_out =  Limiter.ar(compressor, 0.97, 0.02);
 
     ReplaceOut.ar(0, master_out);

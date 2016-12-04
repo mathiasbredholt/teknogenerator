@@ -5,7 +5,7 @@ var beat_tags = [\basebeat, \random, \offbeat, \break, \backbeat, \variation, \b
 var harmony_tags = [\drone, \root];
 
 ~all_instruments = [\bd, \clap, \hat, \bass, \pad, \bell, \fm_stab, \cymbal, \ride ];
-// ~all_instruments= [\bass];
+// ~all_instruments= [\pad];
 
 ~init_generation = {
     ~default_attributes = (
@@ -118,7 +118,7 @@ var harmony_tags = [\drone, \root];
             var freqs = { scale.degreeToFreq((0..7).wchoose([ 10, 2, 5, 2, 5, 2, 5, 2 ].normalizeSum), root.midicps, octave) } ! 3;
             attributes.keysValuesChange { |key, value| value * 0.99.rrand(1.01) };
             attributes[\freq] = freqs;
-            attributes[\amp] = 0.08;
+            attributes[\amp] = 0.2;
             attributes[\sustain_time] = (2*bars).rand*60/tempo;
             attributes[\cutoff] = 400;
             attributes[\env_type] = 0;
