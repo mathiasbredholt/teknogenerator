@@ -138,7 +138,7 @@ SynthDef(\bass_real, {
     var fEnv = EnvGen.kr(Env.perc(0.05, 0.2), gate, cutoff - 0.5e3, 0.5e3);
     var sig = Mix(LFSaw.ar(Lag.kr(freq, 0.3) * Rand(0.99, 1.01) ! 2, Rand(0, 1), 0.3)) * 0.3 * amp;
     sig = MoogLadder.ar(sig, fEnv, rez) * 0.3 * aEnv;
-    sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.02)) * aEnv * 0.5;
+    sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.02)) * aEnv * 0.2;
     sig = sig + Mix(DelayC.ar(sig, 0.2, SinOsc.kr(Rand(0.07, 0.1) ! 2, Rand(0, 2pi) ! 2, 0.03, 0.08), 0.02) ! 8);
     sig = Compander.ar(sig, InFeedback.ar(~sidechain) * 2, 0.1, 1, 1/4, 0.01, 0.2);
     Out.ar(0, sig ! 2);

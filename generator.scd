@@ -58,7 +58,7 @@ var harmony_tags = [\drone, \root];
 
 		if(beat_tag == \variation, {
 			attributes[\amp] = 0.4;
-			attention = 2;
+			attention = 4;
 		});
 	});
 
