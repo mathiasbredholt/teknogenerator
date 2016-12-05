@@ -3,16 +3,21 @@
 ~reverb = 22;
 ~delay = 24;
 ~bass_p = Bus.control(s, 8) ; // amp, freq, rez, filter_release, cutoff, distort, reverb, gate
+~sweep = Bus.control.set(0);
 )
 
 (
+SynthDef(\sidechain, {
+    ReplaceOut.ar(~sidechain, Ringz.ar(Impulse.ar((4*60)/127), 50, 0.4) ! 2);
+}).add;
+
 SynthDef(\bd, {
     arg amp = 1, freq = 50, sustain_time = 0, release = 1, distort = 0;
     var aEnv = EnvGen.kr(Env.linen(1e-3, sustain_time, 0.05, 1, -4), doneAction: 2);
     var sig = Ringz.ar(Impulse.ar(0.1), freq, release) * 0.1 * amp * aEnv;
     sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.01)) * aEnv * 2;
+    sig = HPF.ar(sig, 20 + Lag2.kr(In.kr(~sweep), 0.1));
     Out.ar(0, sig ! 2);
-    Out.ar(~sidechain, sig ! 2);
 }).add;
 
 SynthDef(\sd, {
@@ -32,7 +37,7 @@ SynthDef(\clap, {
     var sig = Mix(BBandPass.ar([ WhiteNoise.ar * aEnv2, WhiteNoise.ar * 0.1 * aEnv ], [cutoff, 8e3], 4)) * 0.5 * amp;
     sig = [sig, DelayC.ar(sig, 0.0007, 0.0007)];
     sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.15));
-    Out.ar(0, sig * 0.5);
+    Out.ar(0, sig * 0.25);
     // Out.ar(~reverb, HPF.ar(sig, 4e3) * reverb);
 }).add;
 
@@ -40,10 +45,17 @@ SynthDef(\hat,{
     arg amp = 0.1, attack = 1e-3, release = 0.1, cutoff = 1000, reverb = 0.01;
     var sig = SinOsc.ar(5e3 + LFTri.ar(5e3, 0, 5e3 * 15));
     var aEnv = EnvGen.kr(Env.perc(attack, release, 1, -6), doneAction: 2);
-    sig = (WhiteNoise.ar + sig) * aEnv * 0.02 * amp;
+    sig = (WhiteNoise.ar + sig) * aEnv * 0.13 * amp;
     sig = HPF.ar(sig, cutoff);
     Out.ar(0, sig ! 2);
     // Out.ar(~reverb, sig * reverb ! 2);
+}).add;
+
+SynthDef(\noise, {
+    arg amp = 0.2, cutoff = 500, rez = 0.5;
+    var sig = BHiPass.ar(WhiteNoise.ar * amp, cutoff + (In.kr(~sweep) * 2), 1) * EnvGen.kr(Env.linen(0.15, 0, 0.03 ,1, -4), doneAction: 2) * LinLin.kr(In.kr(~sweep), 0, 5e3, 0.03, 0.4);
+    // sig = Compander.ar(sig, InFeedback.ar(~sidechain) * /*10*/, 0.01, 1, 1/8, 0.01, 0.2) * 2;
+    Out.ar(0, sig ! 2);
 }).add;
 
 SynthDef(\tone, {
@@ -134,11 +146,11 @@ SynthDef(\bass_real, {
     distort = p[5],
     reverb = p[6],
     gate = p[7];
-    var aEnv = EnvGen.kr(Env.adsr(0.05, 1, 1, 0.05), gate);
-    var fEnv = EnvGen.kr(Env.perc(0.05, 0.2), gate, cutoff - 0.5e3, 0.5e3);
-    var sig = Mix(LFSaw.ar(Lag.kr(freq, 0.3) * Rand(0.99, 1.01) ! 2, Rand(0, 1), 0.3)) * 0.3 * amp;
+    var aEnv = EnvGen.kr(Env.adsr(0.05, 1, 0.5, 0.05), gate);
+    var fEnv = EnvGen.kr(Env.adsr(0.05, 0.3, 0.2, 0.05), gate, cutoff - 0.5e3, 0.5e3 + In.kr(~sweep));
+    var sig = Mix(LFSaw.ar(Lag.kr(freq, 0.2) * Rand(0.99, 1.01) ! 2, Rand(0, 1), 0.3)) * 0.3 * amp;
     sig = MoogLadder.ar(sig, fEnv, rez) * 0.3 * aEnv;
-    sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.02)) * aEnv * 0.5;
+    sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.02)) * aEnv * 0.4;
     sig = sig + Mix(DelayC.ar(sig, 0.2, SinOsc.kr(Rand(0.07, 0.1) ! 2, Rand(0, 2pi) ! 2, 0.03, 0.08), 0.02) ! 8);
     sig = Compander.ar(sig, InFeedback.ar(~sidechain) * 2, 0.1, 1, 1/4, 0.01, 0.2);
     Out.ar(0, sig ! 2);
@@ -159,7 +171,7 @@ SynthDef(\pad, {
         EnvGen.kr(Env.perc(1e-3, 1))
     ]);
     var fEnv = Select.kr(env_type, [
-        EnvGen.kr(Env.linen(1, sustain_time), 1, cutoff - freq, freq),
+        EnvGen.kr(Env.linen(1, sustain_time), 1, cutoff - freq, freq + In.kr(~sweep)),
         EnvGen.kr(Env.perc(1e-3, 0.3), 1, cutoff - freq, freq)
     ]);
     var sig = Mix(
@@ -201,7 +213,7 @@ SynthDef(\fm_stab, {
 SynthDef(\bell, {
     arg gate=1, freq=100, decay=0.6, amp=1, reverb = 0.05, distort = 1, delay = 0.5;
     var excitation, sig, aEnv, fEnv;
-    excitation = WhiteNoise.ar(EnvGen.ar(Env.perc(0.0000001, 0.01)));
+    excitation = WhiteNoise.ar(EnvGen.ar(Env.perc(1e-6, 0.01)));
     sig = Klank.ar(`[
         // frequency ratios
         [0.501, 1, 0.7,   2.002, 3, 9.6,   2.49, 11, 2.571,  3.05, 6.242, 12.49, 13, 16, 24],
@@ -219,5 +231,10 @@ SynthDef(\bell, {
     Out.ar(~delay, sig*delay ! 2);
 }).add;
 
+
+SynthDef(\sweep_control, {
+    arg cutoff = 0, lag_time = 0.5;
+    Out.kr(~sweep, Lag.kr(cutoff, lag_time));
+}).add;
 
 )

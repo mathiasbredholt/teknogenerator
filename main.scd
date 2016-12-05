@@ -17,32 +17,35 @@ var seq_duration = 4;
 var seed = (2**15).rand.round;
 
 var root, scale, grains, state_rand;
-// seed:  410
 
 /*
 STATES:
 0 - Minimal
 1 - Build-up
 2 - Break
-3 - Climax-
-4 - Outro
+3 - Climax
 */
+thisThread.randSeed = seed;
+//6508 - 85 BPM
+// 28654 - 85 BPM
 
 ~bass_p.set(0 ! 8);
 Synth(\bass_real);
+~sweep_control = Synth(\sweep_control);
 
-thisThread.randSeed = seed;
+
+
+
 ("seed: " + seed).postln;
 
 
 ~create_song = {
-    var bars = 2;
+    var bars = [1, 2, 3, 4].choose;
     state_rand = { 5.rand } ! 256;
 
     // Generate array of random grains
     root = 55.rrand(66);
-    scale = [ Scale.majorPentatonic, Scale.minorPentatonic, Scale.dorian, Scale.lydian ].choose;
-    // scale = [ Scale.chromatic24 ].choose;
+    scale = [ Scale.majorPentatonic, Scale.minorPentatonic, Scale.dorian, Scale.lydian, Scale.chromatic24, Scale.hexAeolian ].choose;
     ~init_generation.value;
     grains = { ~generate.value(Tempo.bpm, scale, root, res, bars) } ! num_grains;
 
@@ -53,14 +56,41 @@ thisThread.randSeed = seed;
     // 1, 0, 1, 0, 1, 0, 1 ..
     // rest, note, rest, note ...
 
-    Tempo.bpm = 135;
+    Tempo.bpm = 127;
+
+
 
     ~all_instruments.do {
         arg instr;
+        Pdef((instr ++ "_pat").asSymbol).quant = -1;
         Pdef((instr ++ "_pat").asSymbol).play;
     };
 
     g = Group.new(s);
+
+    Tdef(\sweep_task).quant = -1;
+    Tdef(\sweep_task, {
+        var old_cutoff = 0;
+        var cutoff = Pn(Plazy({
+            var seq = [[ 0, 0, 0, 0], { 2.rand } ! 4].wchoose([0.7, 0.3]);
+            var cutoff = seq * ({ 1e3.exprand(10e3) } ! 4);
+            seq.postln;
+            Pseq(cutoff);
+        })).asStream;
+
+        var lag_time = Pseq([0.05, 0, 2, 0], inf).asStream;
+
+        loop {
+            ~sweep_control.set(\cutoff, cutoff.next, \lag_time, lag_time.next);
+            8.wait;
+        };
+    }).play;
+
+    Pdef(\sidechain).quant = -1;
+    Pdef(\sidechain_pat, Pbind(
+        \instrument, \sidechain,
+        \dur, 1
+    )).play;
 
 
     fork {
@@ -68,7 +98,7 @@ thisThread.randSeed = seed;
         var bar_count = 0;
         var state = 0;
         var attention_mean = 0;
-        var attention_mean_calc = [ 1.0.rrand(1.5),  1.7.rrand(2.0), 0.9, 2.2.rrand(3.0), 0.0];
+        var attention_mean_calc = [ 1.0.rrand(1.5),  1.7.rrand(2.0), 0.9, 2.2.rrand(3.0), 0.0]*1/2;
 
         // ("The time is "++Date.getDate.format("%H:%M") ++ " and you're listening to Techno Generator 3000").speak;
 
@@ -77,7 +107,7 @@ thisThread.randSeed = seed;
             0, #[ 0, 1 ],
             1, #[ 1, 2],
             2, #[ 2, 3 ],
-            3, #[ 1, 2 ],
+            3, #[ 1, 0 ],
             nil, nil
         ], inf).asStream;
 
@@ -85,13 +115,14 @@ thisThread.randSeed = seed;
 
 
         while({ is_playing }, {
-            var seq, attention_array, tmp, deviation = 0.2, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
+            var seq, attention_array, tmp, deviation = 0.3, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
             if (bar_count == 0, {
-                if (state_counter != nil, {
-                    var count = state_counter.next;
-                    ("Progress: "++count).postln;
-                }, {
+                var count = state_counter.next;
+                ("Progress: "++count).postln;
+
+                if (count == nil, {
                     is_playing = false;
+
                 });
 
                 attention_mean = attention_mean_calc[state];
@@ -99,6 +130,7 @@ thisThread.randSeed = seed;
                 ("State: "++state).postln;
                 state = form.next;
             });
+
 
 
 
@@ -201,7 +233,7 @@ thisThread.randSeed = seed;
 
     var reverb = GVerb.ar(reverb_in[0], 100.rrand(150), 1.rrand(4.0), 0.5, 0.5, 15, drylevel: 0, earlyreflevel: 0.1, taillevel: 2);
     var delaytime = 60/Tempo.bpm * [4/3, 2/3, 1/2, 1/4, 1/8, 1/6].choose;
-    var delay = AllpassC.ar(delay_in, delaytime, delaytime, 5);
+    var delay = AllpassC.ar(delay_in, delaytime, delaytime, 2);
 
     var mix = master_in + delay + Compander.ar(reverb, In.ar(~sidechain) * 4, 0.1, 1, 1/4, 0.05, 0.2);
     var compressor = Compander.ar(mix, mix, 0.08, 1, 1/3, 0.02, 0.05) * 1;
