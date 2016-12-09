@@ -82,7 +82,7 @@ SynthDef(\iron, {
     var sig = SinOsc.ar(freq+LFNoise2.kr(10,5));
     harms.do({
         arg harm, index;
-        var i = index-(2*index)+1; // LOL hjÃ¦lp med bedre bÃ¥de at skrive -index
+        var i = index-(2*index)+1; // LOL hjælp med bedre både at skrive -index
         sig = sig + (SinOsc.ar(harm*freq,1/2pi*index)*(2**i) * EnvGen.kr(Env.perc(attack*(1/index),release*(1/(index+1)),curve: \sine)));
     });
 

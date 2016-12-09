@@ -122,7 +122,7 @@ var harmony_tags = [\drone, \root];
         attention = attention * 0.5.rrand(1.5);
         attributes.keysValuesChange { |key, value| value * 0.5.rrand(1.5) };
         attributes[\freq] = scale.degreeToFreq(0.rrand(8), root.midicps, -3);
-        attributes[\legato] = ({ arg i; 2**(i+1) } ! 5).choose;
+        attributes[\legato] = ({ arg i; 2**(i+3) } ! 3).choose;
         attributes[\cutoff] = 500.rrand(10e3);
         attributes[\amp] = 1;
         // attributes[\cutoff] = 500.rrand(5e3);
