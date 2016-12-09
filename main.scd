@@ -11,7 +11,7 @@
 */
 
 (
-var res = 32;
+var res = 64;
 var num_grains = 512;
 var seq_duration = 4;
 var seed = (2**15).rand.round;
@@ -28,6 +28,7 @@ STATES:
 thisThread.randSeed = seed;
 //6508 - 85 BPM
 // 28654 - 85 BPM
+// 23376
 
 ~bass_p.set(0 ! 8);
 Synth(\bass_real);
@@ -41,12 +42,15 @@ Synth(\bass_real);
 
 ~create_song = {
     var bars = [1, 2, 3, 4].choose;
-    state_rand = { 5.rand } ! 256;
+    t =  90.rrand(140);
+	Tempo.bpm = t;
+	if(t > 80,{res = 32}, {res = 64});
 
     // Generate array of random grains
     root = 55.rrand(66);
-    scale = [ Scale.majorPentatonic, Scale.minorPentatonic, Scale.dorian, Scale.lydian, Scale.chromatic24, Scale.hexAeolian ].choose;
-    ~init_generation.value;
+   // scale = [ Scale.majorPentatonic, Scale.minorPentatonic, Scale.dorian, Scale.lydian, Scale.chromatic24, Scale.hexAeolian ].choose;
+    scale = Scale.majorPentatonic;
+	~init_generation.value;
     grains = { ~generate.value(Tempo.bpm, scale, root, res, bars) } ! num_grains;
 
     // translates from
@@ -56,7 +60,7 @@ Synth(\bass_real);
     // 1, 0, 1, 0, 1, 0, 1 ..
     // rest, note, rest, note ...
 
-    Tempo.bpm = 127;
+
 
 
 
@@ -115,7 +119,7 @@ Synth(\bass_real);
 
 
         while({ is_playing }, {
-            var seq, attention_array, tmp, deviation = 0.3, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
+            var seq, attention_array, tmp, deviation = 0.4, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
             if (bar_count == 0, {
                 var count = state_counter.next;
                 ("Progress: "++count).postln;

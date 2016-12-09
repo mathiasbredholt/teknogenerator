@@ -9,6 +9,7 @@
 (
 SynthDef(\sidechain, {
     ReplaceOut.ar(~sidechain, Ringz.ar(Impulse.ar((4*60)/127), 50, 0.4) ! 2);
+	Line.kr(dur: 0.4,doneAction: 2);
 }).add;
 
 SynthDef(\bd, {
