@@ -6,11 +6,23 @@
 ~sweep = Bus.control.set(0);
 )
 
+
 (
 SynthDef(\sidechain, {
     ReplaceOut.ar(~sidechain, Ringz.ar(Impulse.ar((4*60)/127), 50, 0.4) ! 2);
 	Line.kr(dur: 0.4,doneAction: 2);
 }).add;
+
+
+SynthDef(\sampler, {
+	arg amp = 0.1, attack = 0.01, release = 0.5, distort = 0, bufnum, rate = 1;
+	var sig, aEnv;
+	aEnv = EnvGen.kr(Env.perc(attack,release,curve: -8),doneAction: 2);
+	sig = PlayBuf.ar(1,bufnum,rate) * aEnv * amp;
+	sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.01)) * 2;
+	Out.ar(0,sig ! 2)
+}).add;
+
 
 SynthDef(\bd, {
     arg amp = 1, freq = 50, sustain_time = 0, release = 1, distort = 0;
