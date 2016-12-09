@@ -41,15 +41,15 @@ Synth(\bass_real);
 
 
 ~create_song = {
-    var bars = [1, 2, 3, 4].choose;
-    t =  90.rrand(140);
+	var bars;
+    bars = [1, 2, 3, 4].choose;
+    t =  110.rrand(140);
 	Tempo.bpm = t;
-	if(t > 80,{res = 32}, {res = 64});
 
-    // Generate array of random grains
+
+	// Generate array of random grains
     root = 55.rrand(66);
-   // scale = [ Scale.majorPentatonic, Scale.minorPentatonic, Scale.dorian, Scale.lydian, Scale.chromatic24, Scale.hexAeolian ].choose;
-    scale = Scale.majorPentatonic;
+    scale = [Scale.diminished, Scale.dorian, Scale.lydian, Scale.chromatic24, Scale.hexAeolian ].choose;
 	~init_generation.value;
     grains = { ~generate.value(Tempo.bpm, scale, root, res, bars) } ! num_grains;
 
@@ -69,10 +69,10 @@ Synth(\bass_real);
     g = Group.new(s);
 
     Tdef(\sweep_task).quant = -1;
-    Tdef(\sweep_task, {
+	Tdef(\sweep_task, {
         var old_cutoff = 0;
         var cutoff = Pn(Plazy({
-            var seq = [[ 0, 0, 0, 0], { 2.rand } ! 4].wchoose([0.7, 0.3]);
+            var seq = [[ 0, 0, 0, 0], { 2.rand } ! 4].wchoose([0.8, 0.2]);
             var cutoff = seq * ({ 1e3.exprand(10e3) } ! 4);
             seq.postln;
             Pseq(cutoff);
@@ -130,7 +130,6 @@ Synth(\bass_real);
                 ("State: "++state).postln;
                 state = form.next;
             });
-
 
 
 

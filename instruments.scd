@@ -7,9 +7,22 @@ s.waitForBoot({
 	~bass_p = Bus.control(s, 8) ; // amp, freq, rez, filter_release, cutoff, distort, reverb, gate
 	~sweep = Bus.control.set(0);
 
+
 	SynthDef(\sidechain, {
 		ReplaceOut.ar(~sidechain, Ringz.ar(Impulse.ar((4*60)/127), 50, 0.4) ! 2);
+		Line.kr(dur: 0.4,doneAction: 2);
 	}).add;
+
+
+	SynthDef(\sampler, {
+		arg amp = 0.1, attack = 0.01, release = 0.5, distort = 0, bufnum, rate = 1;
+		var sig, aEnv;
+		aEnv = EnvGen.kr(Env.perc(attack,release,curve: -8),doneAction: 2);
+		sig = PlayBuf.ar(1,bufnum,rate) * aEnv * amp;
+		sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.01)) * 2;
+		Out.ar(0,sig ! 2)
+	}).add;
+
 
 	SynthDef(\bd, {
 		arg amp = 1, freq = 50, sustain_time = 0, release = 1, distort = 0;
@@ -151,6 +164,7 @@ s.waitForBoot({
 		var fEnv = EnvGen.kr(Env.adsr(0.05, 0.3, 0.2, 0.05), gate, cutoff - 0.5e3, 0.5e3 + In.kr(~sweep));
 		var sig = Mix(LFSaw.ar(Lag.kr(freq, 0.2) * Rand(0.99, 1.01) ! 2, Rand(0, 1), 0.3)) * 0.3 * amp;
 		sig = MoogLadder.ar(sig, fEnv, rez) * 0.3 * aEnv;
+
 		sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.02)) * aEnv * 0.4;
 		sig = sig + Mix(DelayC.ar(sig, 0.2, SinOsc.kr(Rand(0.07, 0.1) ! 2, Rand(0, 2pi) ! 2, 0.03, 0.08), 0.07) ! 8);
 		sig = Compander.ar(sig, InFeedback.ar(~sidechain) * 2, 0.1, 1, 1/4, 0.01, 0.2);
@@ -233,7 +247,7 @@ s.waitForBoot({
 			// ring times
 			[1.2, 0.9, 0.25, 0.14, 0.07].stutter(3)
 		]
-			, excitation, freq, 0, decay);
+		, excitation, freq, 0, decay);
 		aEnv = EnvGen.ar(Env.perc(1e-3,decay),doneAction: 2);
 		sig = (sig+excitation) * amp;
 		sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.02));
@@ -248,5 +262,4 @@ s.waitForBoot({
 		Out.kr(~sweep, Lag.kr(cutoff, lag_time));
 	}).add;
 });
-
 )
