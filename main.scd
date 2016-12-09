@@ -61,9 +61,6 @@ Synth(\bass_real);
     // rest, note, rest, note ...
 
 
-
-
-
     ~all_instruments.do {
         arg instr;
         Pdef((instr ++ "_pat").asSymbol).quant = -1;
@@ -104,8 +101,6 @@ Synth(\bass_real);
         var attention_mean = 0;
         var attention_mean_calc = [ 1.0.rrand(1.5),  1.7.rrand(2.0), 0.9, 2.2.rrand(3.0), 0.0]*1/2;
 
-        // ("The time is "++Date.getDate.format("%H:%M") ++ " and you're listening to Techno Generator 3000").speak;
-
         var form = Pfsm([
             #[ 0 ],
             0, #[ 0, 1 ],
@@ -116,6 +111,8 @@ Synth(\bass_real);
         ], inf).asStream;
 
         var state_counter = Pseries(0, 1, 10).asStream;
+
+        // ("The time is "++Date.getDate.format("%H:%M") ++ " and you're listening to Techno Generator 3000").speak;
 
 
         while({ is_playing }, {
@@ -240,11 +237,10 @@ Synth(\bass_real);
     var delay = AllpassC.ar(delay_in, delaytime, delaytime, 2);
 
     var mix = master_in + delay + Compander.ar(reverb, In.ar(~sidechain) * 4, 0.1, 1, 1/4, 0.05, 0.2);
-    var compressor = Compander.ar(mix, mix, 0.08, 1, 1/3, 0.02, 0.05) * 1;
+    var compressor = Compander.ar(mix, mix, 0.02, 1, 1/3, 0.02, 0.05) * 2.5;
     var master_out =  Limiter.ar(compressor, 0.97, 0.02);
 
     ReplaceOut.ar(0, master_out);
 
 }.play(g, addAction: \addToTail);
 )
-2**63
