@@ -1,14 +1,14 @@
 (
-var max_attention = 10;
+var attention_scale = 5;
 var beat_tags = [\basebeat, \random, \offbeat, \break, \backbeat, \variation, \barline ];
 // var harmony_tags = [\root, \variation, \drone];
 var harmony_tags = [\drone, \root];
 
 ~all_instruments = [\bd, \clap, \hat, \bass, \pad, \bell, \fm_stab, \cymbal, \ride, \noise, \sampler ];
-// ~all_instruments= [\noise];
+ //~all_instruments= [\bd, \hat, \bass];
 
 ~init_generation = {
-	p = "909/hats/hh*.wav".pathMatch;
+	p = (File.getcwd.replace("\\", "/") ++ "/hats/hh*.wav").pathMatch;
 	~sample =  Buffer.read(s,p.choose).normalize;
 
 
@@ -41,7 +41,7 @@ var harmony_tags = [\drone, \root];
 		\sampler: 4
 
 	);
-	m = ~default_attention.values.asArray.maxItem/10;
+	m = ~default_attention.values.asArray.maxItem/attention_scale;
 	~default_attention.keysValuesChange({
 		arg key , value;
 		value/m;

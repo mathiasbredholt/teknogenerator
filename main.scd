@@ -42,7 +42,7 @@ Synth(\bass_real);
 
 ~create_song = {
 	var bars;
-    bars = [1, 2, 3, 4].choose;
+    bars = [1, 2, 4].choose;
     t =  110.rrand(140);
 	Tempo.bpm = t;
 
@@ -100,7 +100,7 @@ Synth(\bass_real);
         var bar_count = 0;
         var state = 0;
         var attention_mean = 0;
-        var attention_mean_calc = [ 1.0.rrand(1.5),  1.7.rrand(2.0), 0.9, 2.2.rrand(3.0), 0.0]*1/2;
+        var attention_mean_calc = [ 1.0.rrand(1.5),  1.7.rrand(2.0), 0.9, 2.2.rrand(3.0), 0.0]*2/3;
 
         var form = Pfsm([
             #[ 0 ],
