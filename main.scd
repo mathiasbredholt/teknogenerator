@@ -72,7 +72,7 @@ Synth(\bass_real);
 	Tdef(\sweep_task, {
         var old_cutoff = 0;
         var cutoff = Pn(Plazy({
-            var seq = [[ 0, 0, 0, 0], { 2.rand } ! 4].wchoose([0.8, 0.2]);
+            var seq = [[ 0, 0, 0, 0], { 2.rand } ! 4].wchoose([0.9, 0.1]);
             var cutoff = seq * ({ 1e3.exprand(10e3) } ! 4);
             seq.postln;
             Pseq(cutoff);
