@@ -8,7 +8,7 @@ var harmony_tags = [\drone, \root];
 // ~all_instruments= [\noise];
 
 ~init_generation = {
-	p = "C:/Users/mathi/Music/samples/909/hats/hh*.wav".pathMatch;
+	p = "909/hats/hh*.wav".pathMatch;
 	~sample =  Buffer.read(s,p.choose).normalize;
 
 
