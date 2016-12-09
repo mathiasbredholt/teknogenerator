@@ -60,6 +60,7 @@ Synth(\bass_real);
     // 1, 0, 1, 0, 1, 0, 1 ..
     // rest, note, rest, note ...
 
+    Tempo.bpm = 120;
 
     ~all_instruments.do {
         arg instr;
