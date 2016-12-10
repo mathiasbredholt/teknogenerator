@@ -11,8 +11,8 @@
 */
 
 (
-var res = 64;
-var num_grains = 512;
+var res = 32;
+var num_grains = 250;
 var seq_duration = 4;
 var seed = (2**15).rand.round;
 //var seed = 28654;
@@ -41,23 +41,23 @@ Synth(\bass_real);
 
 
 ~create_song = {
-	var bars;
-    bars = [1, 2, 4].choose;
-    t =  110.rrand(140);
-	Tempo.bpm = t;
+    var bars;
+    bars = [ 2, 4 ].choose;
+    t =  120.rrand(140);
+    Tempo.bpm = t;
 
 
-	// Generate array of random grains
+    // Generate array of random grains
     root = 55.rrand(66);
-    scale = [Scale.diminished, Scale.dorian, Scale.lydian, Scale.chromatic24, Scale.hexAeolian ].choose;
-	~init_generation.value;
+    scale = [ Scale.minor ].choose;
+    ~init_generation.value;
     grains = { ~generate.value(Tempo.bpm, scale, root, res, bars) } ! num_grains;
 
     // translates from
     //(\instrument: \bd, \beat_tag: \basebeat, \sustained: false, \attention: 2, \attributes: (\amp: 0.1))
     // to
     // (\bd: (\sustained: false, \seq: (\amp: [1, 0, 1, 0, 1, 0, 1 ..], \type: [rest, note, rest, note ...])))
-    // 1, 0, 1, 0, 1, 0, 1 ..
+    // 1, 0, 1, 0, 1, 0, 1, ...
     // rest, note, rest, note ...
 
     ~all_instruments.do {
@@ -69,7 +69,7 @@ Synth(\bass_real);
     g = Group.new(s);
 
     Tdef(\sweep_task).quant = -1;
-	Tdef(\sweep_task, {
+    Tdef(\sweep_task, {
         var old_cutoff = 0;
         var cutoff = Pn(Plazy({
             var seq = [[ 0, 0, 0, 0], { 2.rand } ! 4].wchoose([0.9, 0.1]);
@@ -105,7 +105,7 @@ Synth(\bass_real);
             0, #[ 0, 1 ],
             1, #[ 1, 2],
             2, #[ 2, 3 ],
-            3, #[ 1, 0 ],
+            3, #[ 3, 3, 3, 3, 1, 0 ],
             nil, nil
         ], inf).asStream;
 
@@ -115,7 +115,7 @@ Synth(\bass_real);
 
 
         while({ is_playing }, {
-            var seq, attention_array, tmp, deviation = 0.4, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
+            var seq, attention_array, tmp, deviation = 0.3, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
             if (bar_count == 0, {
                 var count = state_counter.next;
                 ("Progress: "++count).postln;
@@ -135,7 +135,7 @@ Synth(\bass_real);
 
             // Creates the 4-bar feelin'
             if(bar_count > 2, {
-                attention_mean = attention_mean * [ 1.25, 0.75 ].choose;
+                attention_mean = attention_mean * 0.8;
             });
 
             swing = 0;
@@ -226,17 +226,23 @@ Synth(\bass_real);
 ~create_song.value;
 
 {
+    var pad_in = In.ar(~pad_fx, 2);
+    var pad_out = pad_in + Mix(DelayC.ar(pad_in, 0.2, SinOsc.kr(Rand(0.07, 0.1) ! 2, Rand(0, 2pi) ! 2, 0.009, 0.01), 0) ! 8);
+
     var master_in = In.ar(0, 2);
-    var delay_in = In.ar(~delay, 2);
-    var reverb_in = In.ar(~reverb, 2);
+    var delay_in = (pad_out * 0.6) + In.ar(~delay, 2);
+    var reverb_in = (pad_out * 0.3) + In.ar(~reverb, 2);
 
-    var reverb = GVerb.ar(reverb_in[0], 100.rrand(150), 1.rrand(4.0), 0.5, 0.5, 15, drylevel: 0, earlyreflevel: 0.1, taillevel: 2);
-    var delaytime = 60/Tempo.bpm * [4/3, 2/3, 1/2, 1/4, 1/8, 1/6].choose;
-    var delay = AllpassC.ar(delay_in, delaytime, delaytime, 2);
 
-    var mix = master_in + delay + Compander.ar(reverb, In.ar(~sidechain) * 4, 0.1, 1, 1/4, 0.05, 0.2);
-    var compressor = Compander.ar(mix, mix, 0.02, 1, 1/3, 0.02, 0.05) * 2.5;
+    var reverb = GVerb.ar(reverb_in[0], 100.rrand(150), 1.rrand(4.0), 0.5, 0.5, 15, drylevel: 0, earlyreflevel: 0.1, taillevel: 1);
+    var delaytime = 60/Tempo.bpm * [4/3, 2/3, 3/2, 1,  5/4, 6/8, 5/6].choose;
+    var delay = AllpassC.ar(delay_in, delaytime, delaytime, 2, 0.2);
+
+    var mix = master_in + delay + pad_out + reverb;
+    var compressor = Compander.ar(mix, mix, 0.02, 1, 1/3, 0.02, 0.05) * 3;
     var master_out =  Limiter.ar(compressor, 0.97, 0.02);
+
+
 
     ReplaceOut.ar(0, master_out);
 
