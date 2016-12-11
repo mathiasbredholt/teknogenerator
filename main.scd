@@ -267,7 +267,7 @@ Synth(\bass_real);
     var delaytime = 60/Tempo.bpm * [4/3, 2/3, 3/2, 1,  5/4, 6/8, 5/6].choose;
     var delay = AllpassC.ar(delay_in, delaytime, delaytime, 2, 0.5);
 
-    var mix = master_in + delay + pad_out + reverb;
+    var mix = master_in + delay + chords_out + reverb;
     var compressor = Compander.ar(mix, mix, 0.1, 1, 1/3, 0.02, 0.05) * 7;
     var master_out =  Limiter.ar(compressor, 0.97, 0.02);
 
