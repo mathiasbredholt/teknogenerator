@@ -2,8 +2,8 @@
 var beat_tags = [\basebeat, \random, \offbeat, \break, \backbeat, \variation, \barline ];
 // var harmony_tags = [\root, \variation, \drone];
 var bar_tags = [\all, \variation];
-~attention_scale = 0.2;
-~all_instruments = [\bd, \noise, \chords, \hat, \hat909, \clap909, \fm_stab, \bell, \bass, \ride, \fm_stab ];
+~attention_scale = 0.01;
+~all_instruments = [\bd, \noise, \chords, \iron, \hat, \hat909, \clap909, \fm_stab, \bell, \bass, \ride, \fm_stab, \pads, \sd, \clap ];
 
 ~init_generation = {
     p = ((File.getcwd.replace("\\", "/") ++ "/hats/hh*.wav").pathMatch ++
@@ -31,7 +31,9 @@ var bar_tags = [\all, \variation];
         \fm_stab: (\type: \rest, \freq: 100, \amp: 0.05, \attack: 1e-3, \release: 0.08.rrand(0.3), \detune: 0.5),
         \bell: (\type: \rest, \freq: 200.0.exprand(1200.0), \decay: 0.1.rrand(0.9), \amp: 0.1, \reverb: 0.0.rrand(0.7), \delay: 0.0.rrand(0.7)),
         \hat909: (\type: \rest, \amp: 0.01, \sustain_time: 0.1.rrand(0.5), \distort: 0.0.rrand(0.6), \bufnum: ~hats.bufnum, \rate: 1),
-        \clap909: (\type: \rest, \amp: 0.01, \sustain_time: 0.1.rrand(0.5), \distort: 0.0.rrand(0.6), \bufnum: ~claps.bufnum, \rate: 1)
+        \clap909: (\type: \rest, \amp: 0.01, \sustain_time: 0.1.rrand(0.5), \distort: 0.0.rrand(0.6), \bufnum: ~claps.bufnum, \rate: 1),
+        \pads: (\type: \rest, \freq: 440, \amp: 1, \sustain_time: 0.0.rrand(0.25)),
+        \iron: (\type: \rest, \freq: 90.rrand(200), \amp: 0.1)
     );
 
     ~default_attention = (
@@ -39,14 +41,16 @@ var bar_tags = [\all, \variation];
         \sd: 4,
         \clap: [ 2, 5].choose,
         \hat: 1,
-        \ride: [2,10].choose,
-        \cymbal: 10,
+        \ride: [2,7].choose,
+        \cymbal: 7,
         \bass: 3,
         \chords: [4,8].choose,
         \fm_stab: [3, 10].choose,
         \bell: [2,5,10].choose,
         \clap909: 2,
-        \hat909: 2
+        \hat909: 2,
+        \pads: 2,
+        \iron: 2
     );
 
     m = ~default_attention.values.asArray.maxItem/~attention_scale;
@@ -63,7 +67,7 @@ var bar_tags = [\all, \variation];
     arg tempo = 127, scale, root = 60, res = 32, bars = 1;
     var beat_tag;
     var bar_tag = \whole;
-    var instrument = ((\bd ! 8) ++ (\hat ! 10) ++ (\hat909 ! 4) ++ ~all_instruments).choose;
+    var instrument = ((\bd ! 8) ++ (\hat ! 4) ++ (\hat909 ! 4) ++ ~all_instruments).choose;
     var attributes = ~default_attributes[instrument].copy;
     var attention = ~default_attention[instrument].copy;
     var index  = 0;
@@ -123,14 +127,14 @@ var bar_tags = [\all, \variation];
     });
 
     if (instrument == \cymbal, {
-        beat_tag = \barline;
+        beat_tag = \offbeat;
         attention = attention * 0.5.rrand(1.5);
         attributes[\type] = \note;
         attributes.keysValuesChange { |key, value| value * 0.2.rrand(1.8) };
     });
 
     if (instrument == \ride, {
-        beat_tag = \barline;
+        beat_tag = \offbeat;
         attention = attention * 0.5.rrand(1.5);
         attributes[\type] = \note;
         attributes.keysValuesChange { |key, value| value * 0.2.rrand(1.8) };
@@ -204,7 +208,7 @@ var bar_tags = [\all, \variation];
         var octave = [0, 1].choose;
         // var scale = [ Scale.minor, Scale.major ].choose;
         var k = ~root_seq.size.rand;
-        var freqs = (0, 2..[8, 10, 12, 14].choose).collect { arg degree; ~scale_seq[k].degreeToFreq(degree, (root + ~root_seq[k]).midicps, 0); };
+        var freqs = (0, 2..[ 6, 8, 10].choose).collect { arg degree; ~scale_seq[k].degreeToFreq(degree, (root + ~root_seq[k]).midicps, 0); };
         var amps = 0.5 / n;
 
         bar_tag = \root;
@@ -216,6 +220,29 @@ var bar_tags = [\all, \variation];
         attributes[\amp] = amps;
         attributes[\sustain_time] = 60/Tempo.bpm * [ 1/8, 1/4, 1/2 ].choose;
         beat_tag = [\variation, \backbeat ].choose;
+        if (beat_tag == \variation, {
+            attention = attention * 5;
+        });
+        attributes[\type] = \note;
+
+    });
+
+    if (instrument == \pads, {
+        var n = 8;
+        // var scale = [ Scale.minor, Scale.major ].choose;
+        var k = ~root_seq.size.rand;
+        var freqs = (0, 2..[4, 6, 8].choose).collect { arg degree; ~scale_seq[k].degreeToFreq(degree, (root + ~root_seq[k]).midicps, 0); };
+        var amps = 0.5 / n;
+
+        bar_tag = \root;
+        if (k != 0, {
+            bar_tag = \variation;
+        });
+        attributes.keysValuesChange { |key, value| value * 0.5.rrand(1.5) };
+        attributes[\freq] = freqs;
+        attributes[\amp] = amps;
+        attributes[\sustain_time] = 60/Tempo.bpm * 4;
+        beat_tag = \barline;
         if (beat_tag == \variation, {
             attention = attention * 5;
         });
@@ -237,6 +264,16 @@ var bar_tags = [\all, \variation];
     });
 
     if (instrument == \bell, {
+        beat_tag = [\offbeat, \variation].choose;
+        attention = attention * 0.5.rrand(1.5);
+        attributes[\type] = \note;
+        attributes.keysValuesChange { |key, value| value * 0.99.rrand(1.01) };
+        if (beat_tag == \random, {
+            attention = attention * 4;
+        });
+    });
+
+    if (instrument == \iron, {
         beat_tag = [\offbeat, \variation].choose;
         attention = attention * 0.5.rrand(1.5);
         attributes[\type] = \note;

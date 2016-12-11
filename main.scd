@@ -12,7 +12,7 @@
 
 (
 var res = 32;
-var num_grains = 250;
+var num_grains = 400;
 var seq_duration = 4;
 var seed = (2**15).rand.round;
 //var seed = 28654;
@@ -62,7 +62,7 @@ Synth(\bass_real);
 
     // ("The time is "++Date.getDate.format("%H:%M") ++ " and you're listening to Techno Generator 3000").speak;
 
-    var instr_list = [\bd, \hat ] ++ ({ ~all_instruments.choose } ! 7);
+    var instr_list = [\bd, \hat, \pads, \iron ] ++ ({ ~all_instruments.choose } ! 7);
     var instr_in_state = {arg i; instr_list[..i+4] } ! 4;
     // var instr_in_state = {[\bass, \bd, \chords, \hat, \hat909, \clap909 ] } ! 4;
     var bars =  [ 1, 2, 4 ].choose;
@@ -143,7 +143,7 @@ Synth(\bass_real);
                 attention_mean = [ attention_mean * 0.75, attention_mean * 1.25].choose;
             });
 
-            swing = 0;
+            swing = 0.0;
             // ----------------------------------------
             {
                 var n_tests = 1;
@@ -151,18 +151,17 @@ Synth(\bass_real);
                 // Iterate through grain array
                 n_tests.do {
                     arg i;
-                    var data, mu, vari, ref, k;
+                    var data, mu, vari, ref, k, m;
 
                     k = (0, 2pi/res..(2*bars*pi) - (2pi/res));
-
+                    m = Pseq([0.5, 1], inf).asStream;
                     ref = (0..((bars*4)-1)).sum{ arg n;
                         x = ((k*res/2) - ((((res/4)*n)+(res/8))*pi)) * pi;
                         x = x.replace([0], [1e-20]);
-                        x.sin/x;
+                        m.next * (x.sin/x);
                     };
 
                     ref = (0.1 + ref) * attention_mean;
-
 
                     // ----- Fill sequence with silence -------
                     ~all_instruments.do {
@@ -209,6 +208,10 @@ Synth(\bass_real);
                         variance = vari;
                         selected_seq = i;
                     });
+
+                    bars.postln;
+                    attention_mean.postln;
+                    data.asCompileString.postln;
                 };
                 seq = tmp_seq[selected_seq];
                 selected_seq.postln;
@@ -252,8 +255,8 @@ Synth(\bass_real);
 ~create_song.value;
 
 {
-    var pad_in = In.ar(~chords_fx, 2);
-    var pad_out = pad_in + Mix(DelayC.ar(pad_in, 0.2, SinOsc.kr(Rand(0.07, 0.1) ! 2, Rand(0, 2pi) ! 2, 0.009, 0.01), 0) ! 8);
+    var chords_in = In.ar(~chords_fx, 2);
+    var chords_out = chords_in + Mix(DelayC.ar(pad_in, 0.2, SinOsc.kr(Rand(0.07, 0.1) ! 2, Rand(0, 2pi) ! 2, 0.009, 0.01), 0) ! 8);
 
     var master_in = In.ar(0, 2);
     var delay_in = (pad_out * 0.3) + In.ar(~delay, 2);
