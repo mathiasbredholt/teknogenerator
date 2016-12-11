@@ -3,7 +3,7 @@ s.waitForBoot({
     ~sidechain = 20;
     ~reverb = 22;
     ~delay = 24;
-    ~pad_fx = 26;
+    ~chords_fx = 26;
     ~bass_p = Bus.control(s, 8) ; // amp, freq, rez, filter_release, cutoff, distort, reverb, gate
     ~sweep = Bus.control.set(0);
 
@@ -30,7 +30,7 @@ s.waitForBoot({
         var sig, aEnv;
         aEnv = EnvGen.kr(Env.linen(attack, sustain_time, 0.05 ,curve: -4),doneAction: 2);
         sig = PlayBuf.ar(1,bufnum,rate * BufRateScale.kr(bufnum)) * aEnv * amp;
-        sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.01)) * 0.5;
+        sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.01)) * 0.1;
         sig = BPeakEQ.ar(sig, 8000, 2, 15);
         Out.ar(0,sig ! 2)
     }).add;
@@ -38,9 +38,9 @@ s.waitForBoot({
 
     SynthDef(\bd, {
         arg amp = 1, freq = 50, sustain_time = 0, release = 1, distort = 0;
-        var aEnv = EnvGen.kr(Env([0, 1, 1, 0], [1e-3, sustain_time, 0.05], -8), doneAction: 2);
+        var aEnv = EnvGen.kr(Env([0, 1, 1, 0], [1e-3, sustain_time, 0.1], -4), doneAction: 2);
         var sig = Ringz.ar(Impulse.ar(0.1), freq, release) * 0.1 * amp * aEnv;
-        sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.01)) * aEnv * 1;
+        sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.01)) * aEnv * 0.5;
         sig = HPF.ar(sig, 20 + Lag2.kr(In.kr(~sweep), 0.1));
         Out.ar(0, sig ! 2);
     }).add;
@@ -148,8 +148,8 @@ s.waitForBoot({
         sig = ((sig * 1) + (lodriver * 2) + (excitation * 2)).dup;
         sig = sig *EnvGen.ar(Env.perc(1e-3, release, 1, -64), doneAction: 2);
 
+        Out.ar(0, (sig * 100).distort*0.002*amp ! 2);
         Out.ar(~reverb, (sig * 100).distort*0.02*amp ! 2);
-
 
     }).add;
 
@@ -160,8 +160,8 @@ s.waitForBoot({
         var sig = Klank.ar(`[{exprand(500, 20000)}.dup(100), nil, { release }.dup(100)], Impulse.ar(0.1)) * 1/100;
         sig = LPF.ar(sig,freqEnv+500);
         sig = sig * ampEnv;
-
-        Out.ar(~reverb, sig * amp ! 2);
+        Out.ar(0, sig * 0.02 * amp ! 2);
+        Out.ar(~reverb, sig * 0.02 * amp ! 2);
     }).add;
 
     SynthDef(\bass_real, {
@@ -174,13 +174,13 @@ s.waitForBoot({
         distort = p[5],
         reverb = p[6],
         gate = p[7];
-        var aEnv = EnvGen.kr(Env.adsr(0.05, 0.4,  0.4, 0.05), gate);
-        var fEnv = EnvGen.kr(Env.adsr(0.05, 0.2, 0.0, 0.05), gate, cutoff - 0.5e3, 0.5e3 + In.kr(~sweep));
-        var sig = SinOsc.ar(Lag.kr(freq, 0.2), 0, 0.4) + Mix(LFSaw.ar(Lag.kr(freq, 0.2) * Rand(0.99, 1.01) ! 2, Rand(0, 1), 0.3)) * 0.1 * amp;
-        sig = BLowPass.ar(sig, fEnv, 1) * 0.5 * aEnv;
+        var aEnv = EnvGen.kr(Env.adsr(0.05, 0.05,  0.7, 0.05), gate);
+        var fEnv = EnvGen.kr(Env.adsr(0.05, 0.05, 0.0, 0.05), gate, 1e3 - 0.3e3, 0.3e3 + In.kr(~sweep));
+        var sig = (SinOsc.ar(Lag.kr(freq, 0.4), 0, 1) + Mix(LFSaw.ar(Lag.kr(freq, 0.4) * Rand(0.99, 1.01) ! 4, Rand(0, 1), 0.3))) * 0.1 * amp;
+        sig = BLowPass4.ar(sig, fEnv, 1) * 0.5 * aEnv;
 
-        sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.02)) * aEnv;
-        sig = sig + Mix(DelayC.ar(sig, 0.2, SinOsc.kr(Rand(0.07, 0.1) ! 2, Rand(0, 2pi) ! 2, 0.03, 0.08), 0.03) ! 8);
+        // sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.02)) * aEnv;
+        // sig = sig + Mix(DelayC.ar(sig, 0.2, SinOsc.kr(Rand(0.07, 0.1) ! 2, Rand(0, 2pi) ! 2, 0.03, 0.08), 0.03) ! 8);
         sig = Compander.ar(sig, InFeedback.ar(~sidechain), 0.1, 1, 1/4, 0.01, 0.2);
         Out.ar(0, sig ! 2);
 
@@ -193,30 +193,25 @@ s.waitForBoot({
         EnvGen.kr(Env.asr(0,1,0), gate, doneAction: 2);
     }).add;
 
-    SynthDef(\pad, {
-        arg freq = 500, amp = 1, sustain_time = 2, cutoff = 100, osc_type = 1, env_type = 0, reverb = 0.2, delay = 0.6, rez = 0.4;
-        var aEnv = EnvGen.kr(Env.new([0, 1, 0.1, 0], [0.01, 0.2, 0.05], -4));
-        var fEnv = EnvGen.kr(Env.perc(1e-3, 0.03), 1, cutoff + In.kr(~sweep) - freq, freq);
+    SynthDef(\chords, {
+        arg freq = 500, amp = 1, sustain_time = 2, cutoff = 100, filter_release = 0.03, reverb = 0.2, delay = 0.6, rez = 0.4;
+        var aEnv = EnvGen.kr(Env.new([0, 1, 0.5, 0], [0.01, sustain_time, 0.05], -4), doneAction: 2);
+        var fEnv = EnvGen.kr(Env.perc(1e-3, filter_release), 1, cutoff - freq, freq + In.kr(~sweep));
         var sig = Select.ar(IRand(0, 1), [
-            Mix(
-                LFSaw.ar(
-                    (freq * Rand(0.998, 1.002) ! 2) * SinOsc.kr(Rand(0.5, 1), Rand(0, 2pi)).range(0.998, 1.002) ! 4,
-                    Rand(0, 1),
-                    0.3
-                )
+            LFSaw.ar(
+                freq * Rand(0.995, 1.005) ! 2,
+                Rand(0, 1),
+                0.3
             ),
-            Mix(
-                LFPulse.ar(
-                    (freq * Rand(0.998, 1.002) ! 2) * SinOsc.kr(Rand(0.5, 1), Rand(0, 2pi)).range(0.998, 1.002) ! 4,
-                    Rand(0, 1),
-                    Rand(0, 1),
-                    0.3
-                )
+            LFPulse.ar(
+                freq * Rand(0.995, 1.005) ! 2,
+                Rand(0, 1),
+                Rand(0, 1),
+                0.3
             )
         ]) * 0.1 * aEnv * amp;
         sig = BLowPass.ar(sig, fEnv, 0.3);
-        Out.ar(~pad_fx, sig);
-        EnvGen.kr(Env.linen(0.03, sustain_time, 0.03), doneAction: 2);
+        Out.ar(~chords_fx, sig);
     }).add;
 
     SynthDef(\fm_stab, {
@@ -234,9 +229,10 @@ s.waitForBoot({
 
 
         fm = SinOsc.ar(freq + fm, Saw.kr(0.5).range(-2pi,2pi));
-        fm = fm * aEnv;
+        fm = fm * aEnv * 0.3;
         fm = BBandPass.ar(fm,freq+(fEnv*1000),1.5);
-        Out.ar(0,(fm*amp));
+        Out.ar(~chords_fx, (fm*amp) * 0.1);
+        Out.ar(0, (fm*amp) * 0.5);
     }).add;
 
     SynthDef(\bell, {
@@ -253,7 +249,7 @@ s.waitForBoot({
         ]
         , excitation, freq, 0, decay);
         aEnv = EnvGen.ar(Env.perc(1e-3,decay),doneAction: 2);
-        sig = (sig+excitation) * 0.5 * amp;
+        sig = (sig+excitation) * 0.2 * amp;
         sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.02));
         Out.ar(0, sig ! 2);
         Out.ar(~reverb, sig*reverb ! 2);
