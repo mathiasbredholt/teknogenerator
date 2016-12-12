@@ -166,7 +166,7 @@ s.waitForBoot({
         var sig = Klank.ar(`[{exprand(500, 20000)}.dup(100), nil, { release }.dup(100)], Impulse.ar(0.1)) * 1/100;
         sig = LPF.ar(sig,freqEnv+500);
         sig = sig * ampEnv;
-        sig = sig * 0.25;
+        sig = sig * 0.4;
         Out.ar(0, sig * 0.1 * amp ! 2);
         Out.ar(~reverb, sig * 0.5 * amp ! 2);
     }).add;

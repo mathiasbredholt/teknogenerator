@@ -46,8 +46,8 @@ Synth(\bass_real);
     var is_playing = true;
     var bar_count = 0;
     var state = 0;
-    var attention_mean = 0;
-    var attention_mean_calc = [ 10, 20, 5, 40] * ~attention_scale;
+    var attention_max = 0;
+    var attention_max_in_state = [ 1, 1, 0.15, 1.5 ] * ~attention_scale;
 
     var form = Pfsm([
         #[ 0 ],
@@ -62,14 +62,15 @@ Synth(\bass_real);
 
     // ("The time is "++Date.getDate.format("%H:%M") ++ " and you're listening to Techno Generator 3000").speak;
 
-    var instr_list = [\bd, \hat, \pads ] ++ ({ ~all_instruments.choose } ! 7);
+    var instr_available = ~all_instruments.copy.removeAll([\bd, \hat, \pads]);
+    var instr_list = [\bd, \hat, \pads ] ++ ({
+        x = instr_available.choose;
+        instr_available.remove(x);
+        x;
+    } ! 7);
     var instr_in_state = {arg i; instr_list[..i+4] } ! 4;
-    // var instr_in_state = {[\bass, \bd, \chords, \hat, \hat909, \clap909 ] } ! 4;
     var bars =  [ 1, 2, 4 ].choose;
-    instr_in_state.postln;
-    // bars = [ 1 ].choose;
-    t =  123.rrand(135);
-    Tempo.bpm = t;
+    Tempo.bpm = 123.rrand(135);
 
     // Generate array of random grains
     root = 55.rrand(66);
@@ -100,9 +101,7 @@ Synth(\bass_real);
             var cutoff = seq * ({ 1e3.exprand(10e3) } ! 4);
             Pseq(cutoff);
         })).asStream;
-
-        var lag_time = Pseq([0.05, 0, 2, 0], inf).asStream;
-
+        var lag_time = Pseq([ 0.05, 0, 2, 2 ], inf).asStream;
         loop {
             ~sweep_control.set(\cutoff, cutoff.next, \lag_time, lag_time.next);
             8.wait;
@@ -118,7 +117,7 @@ Synth(\bass_real);
 
     fork {
         while({ is_playing }, {
-            var seq = (), tmp, mu = 0, dev = 0, median, swing = 0.0.rrand(0.5);
+            var seq = (), median, swing = 0.0.rrand(0.5);
             if (bar_count == 0, {
                 var count = state_counter.next;
                 ("Progress: "++count).postln;
@@ -127,9 +126,8 @@ Synth(\bass_real);
                     is_playing = false;
 
                 });
-
                 state = form.next;
-                attention_mean = attention_mean_calc[state];
+                attention_max = attention_max_in_state[state];
                 ("State: "++state).postln;
 
             });
@@ -140,27 +138,31 @@ Synth(\bass_real);
 
             // Creates the 4-bar feelin'
             if(bar_count > 2, {
-                attention_mean = [ attention_mean * 0.75, attention_mean * 1.25].choose;
+                attention_max = attention_max * 0.75;
             });
 
+            "attention".postln;
+            attention_max.postln;
             swing = 0.0;
-            // ----------------------------------------
+
             {
-                var mean = inf, variance = inf, selected_seq = 0, sum = 0, attention_array = 0 ! (res*bars);
-                // Iterate through grain array
-                var data, mu, vari, ref, k, m;
-
-                k = (0, 2pi/res..(2*bars*pi) - (2pi/res));
-                m = Pseq([0.5, 1], inf).asStream;
-                ref = (0..((bars*4)-1)).sum {
+                // Create array of zeros with the length of the whole sequence
+                var attention_array = 0 ! (res*bars);
+                var ref, k, c;
+                // Create the discrete time vector
+                k = (0, 1/res..bars - (1/res));
+                // Scaling coefficient, 0.5 and 1 for odd and even values of n
+                c = Pseq([ 0.5, 1 ], inf).asStream;
+                // Create discrete reference function
+                ref = (0..(( bars * 4 ) - 1)).sum {
                     arg n;
-                    x = (((k*4) - (((2*n) + 1)*pi))) * pi;
-                    x = x.replace([0], [1e-20]);
-                    m.next * (x.sin/x);
+                    x = ((( 2pi*2*k ) - ((n + (1/2) ) * pi))) * pi;
+                    x = x.replace([ 0 ], [ 1e-20 ]);
+                    c.next * ( x.sin / x);
                 };
-                ref =  ((ref * attention_mean) + 2).clip(0.5, inf);
-
-                // ----- Fill sequence with silence -------
+                // Scale, add offset and clip the function
+                ref =  ((ref * attention_max) + (attention_max/2));
+                // Fill sequence with silence
                 ~all_instruments.do {
                     arg instr;
                     // Add all instruments to sequence
@@ -182,19 +184,23 @@ Synth(\bass_real);
                     if (instr_in_state[state].find([grain[\instrument]]) != nil, {
                         // Copy attention array and add the current grain
                         var tmp = attention_array.copy;
-                        tmp[grain[\index]] = tmp[grain[\index]] + grain[\attention];
+                        var index = grain[\index];
+                        tmp[index] = tmp[index] + grain[\attention];
                         // Check if the new attention array follows the reference function
-                        if (tmp[grain[\index]] <= ref[grain[\index]], {
+
+                        if (tmp[index] <= ref[index], {
                             // The grain is added to the sequence
                             attention_array = tmp;
                             grain[\attributes].keysValuesDo {
                                 arg key, value;
-                                seq[grain[\instrument]][\seq][key][grain[\index]] = value;
+                                seq[grain[\instrument]][\seq][key][index] = value;
                             };
                         });
                     });
 
                 };
+
+                attention_array.asCompileString.postln;
 
                 // attention_array.
                 // mu = data.mean;
@@ -202,8 +208,8 @@ Synth(\bass_real);
                 // sum = data.sum;
                 //
                 // // if ((mu < mean), {
-                // if ((abs(mu-attention_mean) < mean) && (vari < variance), {
-                //     mean = abs(mu-attention_mean);
+                // if ((abs(mu-attention_max) < mean) && (vari < variance), {
+                //     mean = abs(mu-attention_max);
                 //     variance = vari;
                 //     selected_seq = i;
                 // });
