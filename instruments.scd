@@ -19,7 +19,7 @@ s.waitForBoot({
         var sig, aEnv;
         aEnv = EnvGen.kr(Env.linen(attack, sustain_time, 0.05 ,curve: -4),doneAction: 2);
         sig = PlayBuf.ar(1,bufnum,rate * BufRateScale.kr(bufnum)) * aEnv * amp;
-        sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.01)) * 0.3;
+        sig = (sig * (1-distort)) + ((sig * distort.linexp(0, 1, 1, 100)).distort * distort.linexp(0, 1, 1, 0.01)) * 0.2;
         sig = BPeakEQ.ar(sig, 8000, 2, 15);
         Out.ar(0,sig ! 2)
     }).add;
@@ -34,7 +34,6 @@ s.waitForBoot({
         sig = BPeakEQ.ar(sig, 8000, 2, 15);
         Out.ar(0,sig ! 2)
     }).add;
-
 
     SynthDef(\bd, {
         arg amp = 1, freq = 50, sustain_time = 0, release = 1, distort = 0;
@@ -72,7 +71,7 @@ s.waitForBoot({
         arg amp = 0.1, attack = 1e-3, release = 0.1, cutoff = 1000, reverb = 1;
         var sig = SinOsc.ar(5e3 + LFTri.ar(5e3, 0, 5e3 * 15));
         var aEnv = EnvGen.kr(Env.perc(attack, release, 1, -6), doneAction: 2);
-        sig = (WhiteNoise.ar + sig) * aEnv * 0.08 * amp;
+        sig = (WhiteNoise.ar + sig) * aEnv * 0.04 * amp;
         sig = HPF.ar(sig, cutoff);
         sig = [sig, DelayC.ar(sig, 0.002, 0.002)];
         Out.ar(0, sig);
@@ -83,7 +82,6 @@ s.waitForBoot({
         arg amp = 0.2, cutoff = 500, rez = 0.5, phase = 0, teeth = 40;
         var sig = BPF.ar(GrayNoise.ar * amp, cutoff + (In.kr(~sweep) * 2), 0.4) * EnvGen.kr(Env.linen(0.15, 0, 0.03 ,1, -4), doneAction: 2) * 8 * LinLin.kr(In.kr(~sweep), 0, 5e3, 0.02, 0.08);
         sig = IFFT(PV_RectComb(FFT(LocalBuf(2048), sig), teeth, phase, 0.05));
-        // sig = Compander.ar(sig, InFeedback.ar(~sidechain) * /*10*/, 0.01, 1, 1/8, 0.01, 0.2) * 2;
         Out.ar(0, sig ! 2);
         Out.ar(~reverb, sig ! 2);
     }).add;
@@ -104,24 +102,30 @@ s.waitForBoot({
     }).add;
 
 
-    SynthDef(\iron, {
-        arg amp = 0.01, attack = 0.03, release = 0.5, freq = 100, delay = 0.1;
-        var harms = [0.56,0.92,1.19,1.71,2,2.74,3,3.76,4.07];
-        var aEnv = EnvGen.kr(Env.perc(attack, release, curve: -4),doneAction: 2);
-        var sig = SinOsc.ar(freq+LFNoise2.kr(10,5));
-        harms.do({
-            arg harm, index;
-            var i = index-(2*index)+1; // LOL hjælp med bedre både at skrive -index
-            sig = sig + (SinOsc.ar(harm*freq,1/2pi*index)*(2**i) * EnvGen.kr(Env.perc(attack*(1/index),release*(1/(index+1)),curve: \sine)));
-        });
+    SynthDef(\membrane, {
+        arg amp = 0.05, attack = 0.03, release = 0.5, freq = 600, delay = 0.1, reverb = 0.2;
+        var harms = [ 0.56, 0.92, 1.19, 1.71, 2, 2.74, 3, 3.76, 4.07 ];
+        var ampEnv = EnvGen.kr(Env.perc(attack, release), doneAction: 2);
 
-        sig = sig + AllpassC.ar(sig,delay,delay,2,0.2);
-        sig = sig * amp*aEnv + (BPF.ar(WhiteNoise.ar,2e3,mul:0.1)*EnvGen.kr(Env.perc(0.01,0.05))) * 0.1;
+        var sig = SinOsc.ar(freq + LFNoise2.kr(10, 5));
+        sig = sig + DynKlang.ar(`[
+            harms,
+            harms.size.collect {
+                arg i;
+                (2**(i-1).neg) * EnvGen.kr(Env.perc(attack/i, release/(i+1), curve: \sine));
+            },
+            Rand(0, 2pi)
+        ], freq);
+
+        sig = sig + AllpassC.ar(sig, delay, delay, 2, 0.2);
+        sig = sig * amp * ampEnv + (
+            BPF.ar(WhiteNoise.ar, 2e3, 1, 0.1) * EnvGen.kr(Env.perc(0.01, 0.05))
+        );
         sig = BPeakEQ.ar(sig, 100, 1, -10);
+        sig = sig * 0.1;
+        Out.ar(~reverb, sig * reverb ! 2);
         Out.ar(0,sig ! 2);
     }).add;
-
-
 
     SynthDef(\cymbal, {
         // Cymbal sound made with resonatorbanks of fixed exponentially distributed frequencies.
@@ -150,7 +154,6 @@ s.waitForBoot({
         // The hit is added to signal, together with some of the low driving noise
         sig = ((sig * 1) + (lodriver * 2) + (excitation * 2)).dup;
         sig = sig *EnvGen.ar(Env.perc(1e-3, release, 1, -64), doneAction: 2);
-
         Out.ar(0, (sig * 100).distort*0.01*amp ! 2);
         Out.ar(~reverb, (sig * 100).distort*0.2*amp ! 2);
 
@@ -163,6 +166,7 @@ s.waitForBoot({
         var sig = Klank.ar(`[{exprand(500, 20000)}.dup(100), nil, { release }.dup(100)], Impulse.ar(0.1)) * 1/100;
         sig = LPF.ar(sig,freqEnv+500);
         sig = sig * ampEnv;
+        sig = sig * 0.25;
         Out.ar(0, sig * 0.1 * amp ! 2);
         Out.ar(~reverb, sig * 0.5 * amp ! 2);
     }).add;
@@ -240,22 +244,20 @@ s.waitForBoot({
 
     SynthDef(\fm_stab, {
         arg freq = 50, amp = 0.1, attack = 0.1, release = 0.5, detune = 0.5;
-        var partials = [ 1+detune, 2+detune, 4+detune, 12+detune];
+        var partials = [ 1 + detune, 2 + detune, 4 + detune, 12 + detune];
         var indexes = [ 1, 2, 4, 8];
         var fm = 0;
-        var aEnv = EnvGen.ar(Env.perc(attack,release),doneAction: 2);
-        var fEnv = EnvGen.ar(Env.perc(0.01,0.2));
+        var ampEnv = EnvGen.ar(Env.perc(attack, release), doneAction: 2);
+        var freqEnv = freq + (EnvGen.ar(Env.perc(0.01, 0.2)) * 1000);
         partials.size.do {
             arg n;
-            var modfreq = freq*partials[n];
-            fm = SinOsc.ar([modfreq*Rand(0.9999, 1.0001), modfreq*Rand(0.9999, 1.0001)], 0, modfreq*indexes[n], fm);
+            var modfreq = freq * partials[n] * Rand(0.9999, 1.0001) ! 2;
+            fm = fm + SinOsc.ar(modfreq, 0, modfreq*indexes[n]);
         };
-
-
         fm = SinOsc.ar(freq + fm, Saw.kr(0.5).range(-2pi,2pi));
-        fm = fm * aEnv * 0.3;
-        fm = BBandPass.ar(fm,freq+(fEnv*1000),1.5);
-        Out.ar(~chords_fx, (fm*amp) * 0.1);
+        fm = fm * ampEnv * 0.3;
+        fm = BBandPass.ar(fm, freqEnv, 1.5);
+        Out.ar(~chords_fx, fm * amp * 0.1);
         Out.ar(0, (fm*amp) * 0.5);
     }).add;
 

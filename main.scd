@@ -11,8 +11,8 @@
 */
 
 (
-var res = 32;
-var num_grains = 400;
+var res = 64;
+var num_grains = 4000;
 var seq_duration = 4;
 var seed = (2**15).rand.round;
 //var seed = 28654;
@@ -47,7 +47,7 @@ Synth(\bass_real);
     var bar_count = 0;
     var state = 0;
     var attention_mean = 0;
-    var attention_mean_calc = [ 8, 15, 5, 20] * ~attention_scale;
+    var attention_mean_calc = [ 10, 20, 5, 40] * ~attention_scale;
 
     var form = Pfsm([
         #[ 0 ],
@@ -62,7 +62,7 @@ Synth(\bass_real);
 
     // ("The time is "++Date.getDate.format("%H:%M") ++ " and you're listening to Techno Generator 3000").speak;
 
-    var instr_list = [\bd, \hat, \pads, \iron ] ++ ({ ~all_instruments.choose } ! 7);
+    var instr_list = [\bd, \hat, \pads ] ++ ({ ~all_instruments.choose } ! 7);
     var instr_in_state = {arg i; instr_list[..i+4] } ! 4;
     // var instr_in_state = {[\bass, \bd, \chords, \hat, \hat909, \clap909 ] } ! 4;
     var bars =  [ 1, 2, 4 ].choose;
@@ -146,80 +146,72 @@ Synth(\bass_real);
             swing = 0.0;
             // ----------------------------------------
             {
-                var n_tests = 1;
-                var mean = inf, variance = inf, selected_seq = 0, sum = 0, tmp_seq = () ! n_tests, attention_array = (0 ! (res*bars)) ! n_tests;
+                var mean = inf, variance = inf, selected_seq = 0, sum = 0, attention_array = 0 ! (res*bars);
                 // Iterate through grain array
-                n_tests.do {
-                    arg i;
-                    var data, mu, vari, ref, k, m;
+                var data, mu, vari, ref, k, m;
 
-                    k = (0, 2pi/res..(2*bars*pi) - (2pi/res));
-                    m = Pseq([0.5, 1], inf).asStream;
-                    ref = (0..((bars*4)-1)).sum{ arg n;
-                        x = ((k*res/2) - ((((res/4)*n)+(res/8))*pi)) * pi;
-                        x = x.replace([0], [1e-20]);
-                        m.next * (x.sin/x);
-                    };
+                k = (0, 2pi/res..(2*bars*pi) - (2pi/res));
+                m = Pseq([0.5, 1], inf).asStream;
+                ref = (0..((bars*4)-1)).sum {
+                    arg n;
+                    x = (((k*4) - (((2*n) + 1)*pi))) * pi;
+                    x = x.replace([0], [1e-20]);
+                    m.next * (x.sin/x);
+                };
+                ref =  ((ref * attention_mean) + 2).clip(0.5, inf);
 
-                    ref = (0.1 + ref) * attention_mean;
+                // ----- Fill sequence with silence -------
+                ~all_instruments.do {
+                    arg instr;
+                    // Add all instruments to sequence
+                    seq.add(instr -> ());
+                    seq[instr].add(\sustained -> false);
+                    seq[instr].add(\seq -> ());
+                    // Iterate through attributes
+                    ~default_attributes[instr].keysValuesDo {
+                        arg key, value;
+                        // For each attribute add a list of repeated default values
+                        seq[instr][\seq].add(key -> (value ! (res * bars)));
+                    }
+                };
 
-                    // ----- Fill sequence with silence -------
-                    ~all_instruments.do {
-                        arg instr;
-                        // Add all instruments to sequence
-                        tmp_seq[i].add(instr -> ());
-                        tmp_seq[i][instr].add(\sustained -> false);
-                        tmp_seq[i][instr].add(\seq -> ());
-                        // Iterate through attributes
-                        ~default_attributes[instr].keysValuesDo {
-                            arg key, value;
-                            // For each attribute add a list of repeated default values
-                            tmp_seq[i][instr][\seq].add(key -> (value ! (res * bars)));
-                        }
-                    };
-
-                    grains.do {
-                        arg grain;
-                        var tmp = attention_array[i].copy;
-                        var tmp_mu;
-
+                // Iterate through grains
+                grains.do {
+                    arg grain;
+                    // If the instrument should be in the sequence in the current state
+                    if (instr_in_state[state].find([grain[\instrument]]) != nil, {
+                        // Copy attention array and add the current grain
+                        var tmp = attention_array.copy;
                         tmp[grain[\index]] = tmp[grain[\index]] + grain[\attention];
-
-                        // if ((tmp_mu <= attention_mean) && (instr_in_state[state].find([grain[\instrument]]) != nil), {
-
-                        if ((tmp[grain[\index]] <= ref[grain[\index]]) && (instr_in_state[state].find([grain[\instrument]]) != nil), {
-                            attention_array[i] = tmp;
-
+                        // Check if the new attention array follows the reference function
+                        if (tmp[grain[\index]] <= ref[grain[\index]], {
+                            // The grain is added to the sequence
+                            attention_array = tmp;
                             grain[\attributes].keysValuesDo {
                                 arg key, value;
-                                tmp_seq[i][grain[\instrument]][\seq][key][grain[\index]] = value;
+                                seq[grain[\instrument]][\seq][key][grain[\index]] = value;
                             };
                         });
-                    };
-
-                    data = attention_array[i];
-                    mu = data.mean;
-                    vari = ((data - mu)**2).sum/(data.size);
-                    sum = data.sum;
-
-                    // if ((mu < mean), {
-                    if ((abs(mu-attention_mean) < mean) && (vari < variance), {
-                        mean = abs(mu-attention_mean);
-                        variance = vari;
-                        selected_seq = i;
                     });
 
-                    bars.postln;
-                    attention_mean.postln;
-                    data.asCompileString.postln;
                 };
-                seq = tmp_seq[selected_seq];
-                selected_seq.postln;
+
+                // attention_array.
+                // mu = data.mean;
+                // vari = ((data - mu)**2).sum/(data.size);
+                // sum = data.sum;
+                //
+                // // if ((mu < mean), {
+                // if ((abs(mu-attention_mean) < mean) && (vari < variance), {
+                //     mean = abs(mu-attention_mean);
+                //     variance = vari;
+                //     selected_seq = i;
+                // });
             }.();
 
             // Iterate through all instruments in sequence
             seq.keysValuesDo {
-                // key is instrument, attributes is (sustained, seq)
+                // key is instrument, attributes is seq
                 arg key, attributes;
                 var pattern = ();
 
@@ -229,14 +221,7 @@ Synth(\bass_real);
                     pattern.add(key->Pseq(value, inf));
                 };
 
-                // Chain the sequences with a pattern containing the instrument
-                /*            if (attributes[\sustained], {
-                Pdef((key ++ "_pat").asSymbol, Pchain(Pmono(
-                key,
-                \group, g,
-                \dur, seq_duration/res,
-                ), Pbind(*pattern.asPairs)));
-                }, {*/
+                // Create patterns for each instrument and chain them with swingify, a custom pattern to add swing
                 Pdef((key ++ "_pat").asSymbol, Pchain(~swingify, Pbind(
                     \instrument, key,
                     \group, g,
@@ -256,11 +241,11 @@ Synth(\bass_real);
 
 {
     var chords_in = In.ar(~chords_fx, 2);
-    var chords_out = chords_in + Mix(DelayC.ar(pad_in, 0.2, SinOsc.kr(Rand(0.07, 0.1) ! 2, Rand(0, 2pi) ! 2, 0.009, 0.01), 0) ! 8);
+    var chords_out = chords_in + Mix(DelayC.ar(chords_in, 0.2, SinOsc.kr(Rand(0.07, 0.1) ! 2, Rand(0, 2pi) ! 2, 0.009, 0.01), 0) ! 8);
 
     var master_in = In.ar(0, 2);
-    var delay_in = (pad_out * 0.3) + In.ar(~delay, 2);
-    var reverb_in = (pad_out * 0.1) + In.ar(~reverb, 2);
+    var delay_in = (chords_out * 0.3) + In.ar(~delay, 2);
+    var reverb_in = (chords_out * 0.1) + In.ar(~reverb, 2);
 
 
     var reverb = GVerb.ar(reverb_in[0], 100.rrand(150), 1.rrand(4.0), 0.5, 0.5, 15, drylevel: 0, earlyreflevel: 0.0, taillevel: 1);
@@ -268,7 +253,7 @@ Synth(\bass_real);
     var delay = AllpassC.ar(delay_in, delaytime, delaytime, 2, 0.5);
 
     var mix = master_in + delay + chords_out + reverb;
-    var compressor = Compander.ar(mix, mix, 0.1, 1, 1/3, 0.02, 0.05) * 7;
+    var compressor = Compander.ar(mix, mix, 0.1, 1, 1/3, 0.02, 0.05) * 10;
     var master_out =  Limiter.ar(compressor, 0.97, 0.02);
 
 
