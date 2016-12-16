@@ -47,7 +47,7 @@ Synth(\bass_real);
     var bar_count = 0;
     var state = 0;
     var attention_max = 0;
-    var attention_max_in_state = [ 1, 1, 0.15, 1.5 ] * ~attention_scale;
+    var attention_max_in_state = [ 0.75, 1.25, 0.8, 1.5 ] * ~attention_scale;
 
     var form = Pfsm([
         #[ 3 ],
