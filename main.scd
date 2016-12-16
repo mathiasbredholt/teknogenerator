@@ -12,7 +12,7 @@
 
 (
 var res = 64;
-var num_grains = 4000;
+var num_grains = 2000;
 var seq_duration = 4;
 var seed = (2**15).rand.round;
 //var seed = 28654;
@@ -50,7 +50,7 @@ Synth(\bass_real);
     var attention_max_in_state = [ 1, 1, 0.15, 1.5 ] * ~attention_scale;
 
     var form = Pfsm([
-        #[ 0 ],
+        #[ 3 ],
         0, #[ 0, 1, 1, 1 ],
         1, #[ 1, 2, 2, 2 ],
         2, #[ 2, 3, 3, 3 ],
@@ -62,8 +62,8 @@ Synth(\bass_real);
 
     // ("The time is "++Date.getDate.format("%H:%M") ++ " and you're listening to Techno Generator 3000").speak;
 
-    var instr_available = ~all_instruments.copy.removeAll([\bd, \hat, \pads]);
-    var instr_list = [\bd, \hat, \pads ] ++ ({
+    var instr_available = ~all_instruments.copy.removeAll([\bd, \hat, \chords]);
+    var instr_list = [\bd, \hat, \chords ] ++ ({
         x = instr_available.choose;
         instr_available.remove(x);
         x;
@@ -200,8 +200,6 @@ Synth(\bass_real);
 
                 };
 
-                attention_array.asCompileString.postln;
-
                 // attention_array.
                 // mu = data.mean;
                 // vari = ((data - mu)**2).sum/(data.size);
@@ -231,10 +229,10 @@ Synth(\bass_real);
                 Pdef((key ++ "_pat").asSymbol, Pchain(~swingify, Pbind(
                     \instrument, key,
                     \group, g,
-                    \dur, seq_duration/res,
+                    \dur, 4/res,
                 ), Pbind(*pattern.asPairs), (swingBase: 0.5, swingAmount: swing, swingThreshold: 0.1)));
             };
-            (seq_duration*bars).wait;
+            (4*bars).wait;
             bar_count = (bar_count + 1) % 4;
         });
 
@@ -246,25 +244,23 @@ Synth(\bass_real);
 ~create_song.value;
 
 {
-    var chords_in = In.ar(~chords_fx, 2);
-    var chords_out = chords_in + Mix(DelayC.ar(chords_in, 0.2, SinOsc.kr(Rand(0.07, 0.1) ! 2, Rand(0, 2pi) ! 2, 0.009, 0.01), 0) ! 8);
+    // Read input from global bus
+    var chorus_in = In.ar(~chorus, 2);
+    // Add delayed versions of input signal with modulated delay times
+    var chorus = chorus_in + Mix(DelayC.ar(chorus_in, 0.2, SinOsc.kr(Rand(0.07, 0.1) ! 2, Rand(0, 2pi) ! 2, 0.009, 0.01), 0) ! 8);
 
     var master_in = In.ar(0, 2);
-    var delay_in = (chords_out * 0.3) + In.ar(~delay, 2);
-    var reverb_in = (chords_out * 0.1) + In.ar(~reverb, 2);
-
+    var delay_in = (chorus * 0.3) + In.ar(~delay, 2);
+    var reverb_in = (chorus * 0.1) + In.ar(~reverb, 2);
 
     var reverb = GVerb.ar(reverb_in[0], 100.rrand(150), 1.rrand(4.0), 0.5, 0.5, 15, drylevel: 0, earlyreflevel: 0.0, taillevel: 1);
     var delaytime = 60/Tempo.bpm * [4/3, 2/3, 3/2, 1,  5/4, 6/8, 5/6].choose;
     var delay = AllpassC.ar(delay_in, delaytime, delaytime, 2, 0.5);
 
-    var mix = master_in + delay + chords_out + reverb;
+    var mix = master_in + delay + chorus + reverb;
     var compressor = Compander.ar(mix, mix, 0.1, 1, 1/3, 0.02, 0.05) * 10;
     var master_out =  Limiter.ar(compressor, 0.97, 0.02);
-
-
-
+    // Replaces all outputs with the mastered signal
     ReplaceOut.ar(0, master_out);
-
 }.play(g, addAction: \addToTail);
 )

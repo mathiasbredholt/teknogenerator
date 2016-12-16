@@ -3,7 +3,7 @@ s.waitForBoot({
     ~sidechain = 20;
     ~reverb = 22;
     ~delay = 24;
-    ~chords_fx = 26;
+    ~chorus = 26;
     ~bass_p = Bus.control(s, 8) ; // amp, freq, rez, filter_release, cutoff, distort, reverb, gate
     ~sweep = Bus.control.set(0);
 
@@ -78,10 +78,15 @@ s.waitForBoot({
         Out.ar(~reverb, sig * reverb);
     }).add;
 
-    SynthDef(\noise, {
+    SynthDef(\spectral_noise, {
         arg amp = 0.2, cutoff = 500, rez = 0.5, phase = 0, teeth = 40;
-        var sig = BPF.ar(GrayNoise.ar * amp, cutoff + (In.kr(~sweep) * 2), 0.4) * EnvGen.kr(Env.linen(0.15, 0, 0.03 ,1, -4), doneAction: 2) * 8 * LinLin.kr(In.kr(~sweep), 0, 5e3, 0.02, 0.08);
+        // Band-pass filtered gray noise
+        var ampEnv = EnvGen.kr(Env.linen(0.15, 0, 0.03 ,1, -4), doneAction: 2);
+        var sig = BPF.ar(GrayNoise.ar * amp, cutoff + (In.kr(~sweep) * 2), 0.4);
+        // Transform to frequency domain, apply comb, and transform back to time
         sig = IFFT(PV_RectComb(FFT(LocalBuf(2048), sig), teeth, phase, 0.05));
+        // Increase amplitude with sweep
+        sig = sig * ampEnv * LinLin.kr(In.kr(~sweep), 0, 5e3, 0.15, 0.6);
         Out.ar(0, sig ! 2);
         Out.ar(~reverb, sig ! 2);
     }).add;
@@ -218,7 +223,7 @@ s.waitForBoot({
             )
         ]) * 0.1 * aEnv * amp;
         sig = BLowPass.ar(sig, fEnv, 0.3);
-        Out.ar(~chords_fx, sig);
+        Out.ar(~chorus, sig);
     }).add;
 
     SynthDef(\pads, {
@@ -239,26 +244,28 @@ s.waitForBoot({
         ]) * 0.15 * aEnv * amp;
         sig = BLowPass.ar(sig, 0.3e3 + (In.kr(~sweep) * 1), 0.3);
         sig = Compander.ar(sig, In.ar(~sidechain, 2) * 6, 0.1, 1, 1/4, 0.01, 0.1);
-        Out.ar(~chords_fx, sig);
+        Out.ar(~chorus, sig);
     }).add;
 
     SynthDef(\fm_stab, {
-        arg freq = 50, amp = 0.1, attack = 0.1, release = 0.5, detune = 0.5;
-        var partials = [ 1 + detune, 2 + detune, 4 + detune, 12 + detune];
-        var indexes = [ 1, 2, 4, 8];
-        var fm = 0;
+        arg freq = 500, amp = 0.1, attack = 0.1, release = 0.1, detune = 0.5;
+        // Create array of modulation frequency partials and modulations indexes
+        var partials = [ 1 + detune, 2 + detune, 4 + detune, 12 + detune ];
+        var indexes = [ 1, 2, 4, 8 ];
         var ampEnv = EnvGen.ar(Env.perc(attack, release), doneAction: 2);
-        var freqEnv = freq + (EnvGen.ar(Env.perc(0.01, 0.2)) * 1000);
-        partials.size.do {
+        var freqEnv = freq + (EnvGen.ar(Env.perc(0.01, 0.1)) * 4e3);
+        // Create carrier oscillator and modulate the frequency with a sum of modulators
+        var sig = SinOsc.ar(freq + Mix(partials.size.collect {
             arg n;
             var modfreq = freq * partials[n] * Rand(0.9999, 1.0001) ! 2;
-            fm = fm + SinOsc.ar(modfreq, 0, modfreq*indexes[n]);
-        };
-        fm = SinOsc.ar(freq + fm, Saw.kr(0.5).range(-2pi,2pi));
-        fm = fm * ampEnv * 0.3;
-        fm = BBandPass.ar(fm, freqEnv, 1.5);
-        Out.ar(~chords_fx, fm * amp * 0.1);
-        Out.ar(0, (fm*amp) * 0.5);
+            SinOsc.ar(modfreq, 0, modfreq*indexes[n]);
+            // Phase is modulated by a Saw oscillator
+        }), Saw.kr(3).range(-2pi, 2pi));
+        sig = sig * amp * ampEnv * 0.3;
+        // Apply band-pass filter to attenuate high frequency content
+        sig = BBandPass.ar(sig, freqEnv, 1.5);
+        Out.ar(~chorus, sig * 0.1);
+        Out.ar(0, sig * 0.5);
     }).add;
 
     SynthDef(\bell, {

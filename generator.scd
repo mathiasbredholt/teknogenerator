@@ -3,7 +3,7 @@ var beat_tags = [\basebeat, \random, \offbeat, \break, \backbeat, \variation, \b
 // var harmony_tags = [\root, \variation, \drone];
 var bar_tags = [\all, \variation];
 ~attention_scale = 5;
-~all_instruments = [\bd, \pads, \hat, \noise, \chords, \membrane, \hat909, \clap909, \fm_stab, \bell, \bass, \ride, \fm_stab, \sd, \clap ];
+~all_instruments = [\bd, \pads, \hat, \spectral_noise, \chords, \membrane, \hat909, \clap909, \fm_stab, \bell, \bass, \ride, \fm_stab, \sd, \clap ];
 
 ~init_generation = {
     p = ((File.getcwd.replace("\\", "/") ++ "/hats/hh*.wav").pathMatch ++
@@ -17,13 +17,12 @@ var bar_tags = [\all, \variation];
     // ~sample =  Buffer.read(s,"C:/Users/mathi/Music/samples/909/hats/"++p).normalize;
     ~claps =  Buffer.read(s, p).normalize;
 
-
     ~default_attributes = (
         \bd: (\type: \rest, \sustain_time: 0.08.rrand(0.25), \amp: 1, \freq: 50.0.rrand(60.0), \release: 1.5.rrand(2.0), \distort: 0.0.rrand(0.6)),
         \sd: (\type: \rest, \amp: 0.4, \release: 0.02.rrand(0.2), \reverb: 0.001.exprand(0.05)),
         \clap: (\type: \rest, \amp: 0.7, \release: 0.05.exprand(0.15), \reverb: 0.1, \lfo: 10.0.rrand(60), \cutoff: 500.0.exprand(10e3)),
         \hat: (\type: \rest, \amp: 0.5, \attack: 1e-3, \release: 0.02.rrand(0.05), \cutoff: 5e3.rrand(15e3), \reverb: 0.0.rrand(0.4)),
-        \noise: (\type: \rest, \amp: 0.1, \cutoff: 1e3.rrand(1.5e3), \phase: 0.rrand(1), \teeth: 5.rrand(60), \rez: 0.5.rand(0.7)),
+        \spectral_noise: (\type: \rest, \amp: 0.1, \cutoff: 1e3.rrand(1.5e3), \phase: 0.rrand(1), \teeth: 5.rrand(60), \rez: 0.5.rand(0.7)),
         \ride: (\type: \rest, \release: 2.0.rrand(5), \amp: 0.1),
         \cymbal: (\type: \rest, \release: 2.0.rrand(8.0), \amp: 0.1, \reverb: 0.001.exprand(0.05)),
         \bass: (\type: \rest, \amp: 1, \freq: 50, \rez: 0.0.rrand(0.2), \filter_release: 0.01.exprand(1.0), \cutoff: 500.rrand(5e3), \legato: 4),
@@ -44,13 +43,14 @@ var bar_tags = [\all, \variation];
         \ride: [2,7].choose,
         \cymbal: 7,
         \bass: 3,
-        \chords: [4,8].choose,
+        \chords: [1,4].choose,
         \fm_stab: [3, 10].choose,
         \bell: [2,5,10].choose,
         \clap909: 2,
         \hat909: 2,
         \pads: 2,
-        \membrane: 2
+        \membrane: 2,
+        \spectral_noise: 2
     );
 
     m = ~default_attention.values.asArray.maxItem/~attention_scale;
@@ -117,7 +117,7 @@ var bar_tags = [\all, \variation];
         });
     });
 
-    if (instrument == \noise, {
+    if (instrument == \spectral_noise, {
         beat_tag = \offbeat;
         attention = 0;
         // attributes.keysValuesChange { |key, value| value * 0.95.rrand(1.05) };
@@ -190,27 +190,31 @@ var bar_tags = [\all, \variation];
     });
 
     if (instrument == \chords, {
-        var n = 8;
-        var octave = [0, 1].choose;
-        // var scale = [ Scale.minor, Scale.major ].choose;
-        var k = ~root_seq.size.rand;
-        var freqs = (0, 2..[ 6, 8, 10].choose).collect { arg degree; Scale.minor.degreeToFreq(degree, (root + ~root_seq[k]).midicps, 0); };
-        var amps = 0.5 / n;
-
-        bar_tag = \root;
-        if (k != 0, {
-            bar_tag = \variation;
-        });
+        var k, octave, freqs, amps;
+        // Makes the pattern play this grain
+        attributes[\type] = \note;
+        // Vary the attributes randomly
         attributes.keysValuesChange { |key, value| value * 0.5.rrand(1.5) };
-        attributes[\freq] = freqs;
-        attributes[\amp] = amps;
+        // Set the sustain time to a discrete rhythmic value
         attributes[\sustain_time] = 60/Tempo.bpm * [ 1/8, 1/4, 1/2 ].choose;
         beat_tag = [\variation, \backbeat ].choose;
         if (beat_tag == \variation, {
             attention = attention * 5;
         });
-        attributes[\type] = \note;
-
+        // Pick index in root sequence
+        k = ~root_seq.size.rand;
+        octave = [0, 1].choose;
+        // Generate frequencies from the minor scale
+        freqs = (0, 2..[ 6, 8, 10].choose).collect {
+            arg degree; Scale.minor.degreeToFreq(degree, (root + ~root_seq[k]).midicps, octave);
+        };
+        amps = 0.5 / freqs.size;
+        bar_tag = \root;
+        if (k != 0, {
+            bar_tag = \variation;
+        });
+        attributes[\freq] = freqs;
+        attributes[\amp] = amps;
     });
 
     if (instrument == \pads, {
